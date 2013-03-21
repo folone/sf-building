@@ -3,3 +3,10 @@
 *.ml
 *.mli
 *.glob
+*.aux
+*.log
+*.toc
+*.out
+*.sty
+*.out
+*.tm

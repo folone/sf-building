@@ -166,6 +166,10 @@ all.pdf: $(VFILES)
 all-gal.pdf: $(VFILES)
 	$(COQDOC) -toc -pdf -g $(COQDOCLIBS) -o $@ `$(COQDEP) -sort -suffix .v $(VFILES)`
 
+all.tex: $(VFILES)
+	$(COQDOC) -toc -latex $(COQDOCLIBS) -o $@ `$(COQDEP) -sort -suffix .v $(VFILES)`
+
+
 
 
 ####################
