@@ -98,41 +98,42 @@ PP:=-pp "$(CAMLP4BIN)$(CAMLP4)o -I $(CAMLLIB) -I . $(COQSRCLIBS) $(CAMLP4EXTEND)
 #                                 #
 ###################################
 
-VFILES:=Symbols.v\
-  Preface.v\
-  Basics.v\
-  Lists.v\
-  Poly.v\
-  Gen.v\
-  Prop.v\
-  Logic.v\
-  SfLib.v\
-  Imp.v\
-  ImpParser.v\
-  ImpCEvalFun.v\
-  Extraction.v\
-  Equiv.v\
-  Hoare.v\
-  HoareList.v\
-  HoareAsLogic.v\
-  Rel.v\
-  Smallstep.v\
-  Types.v\
-  Stlc.v\
-  Typechecking.v\
-  MoreStlc.v\
-  Records.v\
-  References.v\
-  Sub.v\
-  RecordSub.v\
-  Norm.v\
-  LibTactics.v\
-  UseTactics.v\
-  UseAuto.v\
-  PE.v\
-  Postscript.v\
-  Extraction2.v\
-  NormInType.v
+VFILES:=NormInType.v\
+        Extraction2.v\
+        Postscript.v\
+        PE.v\
+        UseAuto.v\
+        UseTactics.v\
+        LibTactics.v\
+        Norm.v\
+        RecordSub.v\
+        Sub.v\
+        References.v\
+        Records.v\
+        MoreStlc.v\
+        Typechecking.v\
+        Stlc.v\
+        Types.v\
+        Smallstep.v\
+        Rel.v\
+        HoareAsLogic.v\
+        HoareList.v\
+        Hoare.v\
+        Equiv.v\
+        Extraction.v\
+        ImpCEvalFun.v\
+        ImpParser.v\
+        Imp.v\
+        SfLib.v\
+        Logic.v\
+        Prop.v\
+        Gen.v\
+        Poly.v\
+        Lists.v\
+        Basics.v\
+        Preface.v\
+        Symbols.v
+
 VOFILES:=$(VFILES:.v=.vo)
 VOFILES0:=$(filter-out ,$(VOFILES))
 GLOBFILES:=$(VFILES:.v=.glob)
