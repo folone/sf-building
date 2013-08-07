@@ -1,14 +1,12 @@
 (** * MoreStlc: More on the Simply Typed Lambda-Calculus *)
 
-(* $Date: 2012-04-30 11:09:42 -0400 (Mon, 30 Apr 2012) $ *)
-
-Require Export Stlc.
+Require Export Stlc. 
 
 (* ###################################################################### *)
 (** * Simple Extensions to STLC *)
 
 (** The simply typed lambda-calculus has enough structure to make its
-    theoretical properties interesting, but it is not yet much of a
+    theoretical properties interesting, but it is not much of a
     programming language.  In this chapter, we begin to close the gap
     with real-world languages by introducing a number of familiar
     features that have straightforward treatments at the level of
@@ -42,12 +40,16 @@ Require Export Stlc.
     at the rules defining this new feature as to wade through a lot of
     english text conveying the same information.  Here they are: *)
 
+
 (** Syntax:
 <<
        t ::=                Terms
            | ...               (other terms same as before)
            | let x=t in t      let-binding
->> 
+>>
+*)
+
+(**
     Reduction:
                                  t1 ==> t1'
                      ----------------------------------               (ST_Let1)
@@ -107,9 +109,10 @@ Require Export Stlc.
            | ...
            | T * T             product type
 >>
+*)
 
-   For evaluation, we need several new rules specifying how pairs and
-   projection behave.  
+(** For evaluation, we need several new rules specifying how pairs and
+    projection behave.  
                               t1 ==> t1'
                          --------------------                        (ST_Pair1)
                          (t1,t2) ==> (t1',t2)
@@ -174,13 +177,13 @@ Require Export Stlc.
 (** ** Unit *)
 
 (** Another handy base type, found especially in languages in
-    the ML family, is the singleton type [Unit].  It has a single
-    element -- the term constant [unit] (with a small [u]) -- and a
-    typing rule making [unit] an element of [Unit].  We also add
-    [unit] to the set of possible result values of computations --
-    indeed, [unit] is the _only_ possible result of evaluating an
-    expression of type [Unit]. *)
-   
+    the ML family, is the singleton type [Unit]. *)
+(** It has a single element -- the term constant [unit] (with a small
+    [u]) -- and a typing rule making [unit] an element of [Unit].  We
+    also add [unit] to the set of possible result values of
+    computations -- indeed, [unit] is the _only_ possible result of
+    evaluating an expression of type [Unit]. *)
+
 (** Syntax:
 <<
        t ::=                Terms
@@ -215,8 +218,7 @@ Require Export Stlc.
 
 (** ** Sums *)
 
-(**
-   Many programs need to deal with values that can take two distinct
+(** Many programs need to deal with values that can take two distinct
    forms.  For example, we might identify employees in an accounting
    application using using _either_ their name _or_ their id number.
    A search function might return _either_ a matching value _or_ an
@@ -227,27 +229,31 @@ Require Export Stlc.
 <<
        Nat + Bool
 >>
-   We create elements of these types by _tagging_ elements of the
-   component types.  For example, if [n] is a [Nat] then [inl v] is an
-   element of [Nat+Bool]; similarly, if [b] is a [Bool] then [inr b]
-   is a [Nat+Bool].  The names of the tags [inl] and [inr] arise from
-   thinking of them as functions
+*)
+
+
+
+(** We create elements of these types by _tagging_ elements of
+    the component types.  For example, if [n] is a [Nat] then [inl v]
+    is an element of [Nat+Bool]; similarly, if [b] is a [Bool] then
+    [inr b] is a [Nat+Bool].  The names of the tags [inl] and [inr]
+    arise from thinking of them as functions
 
 <<
    inl : Nat -> Nat + Bool
    inr : Bool -> Nat + Bool
 >>
 
-   that "inject" elements of [Nat] or [Bool] into the left and right
-   components of the sum type [Nat+Bool].  (But note that we don't
-   actually treat them as functions in the way we formalize them:
-   [inl] and [inr] are keywords, and [inl t] and [inr t] are primitive
-   syntactic forms, not function applications.  This allows us to give
-   them their own special typing rules.)
-   
-   In general, the elements of a type [T1 + T2] consist of the
-   elements of [T1] tagged with the token [inl], plus the elements of
-   [T2] tagged with [inr]. *)
+    that "inject" elements of [Nat] or [Bool] into the left and right
+    components of the sum type [Nat+Bool].  (But note that we don't
+    actually treat them as functions in the way we formalize them:
+    [inl] and [inr] are keywords, and [inl t] and [inr t] are primitive
+    syntactic forms, not function applications.  This allows us to give
+    them their own special typing rules.) *)
+
+(** In general, the elements of a type [T1 + T2] consist of the
+    elements of [T1] tagged with the token [inl], plus the elements of
+    [T2] tagged with [inr]. *)
 
 (** One important usage of sums is signaling errors:
 << 
@@ -255,9 +261,9 @@ Require Export Stlc.
     div =
       \x:Nat. \y:Nat.
         if iszero y then
-          inr Nat unit
+          inr unit
         else
-          inl String ...
+          inl ...
 >>
     The type [Nat + Unit] above is in fact isomorphic to [option nat]
     in Coq, and we've already seen how to signal errors with options. *)
@@ -298,8 +304,9 @@ Require Export Stlc.
            | ...
            | T + T             sum type
 >>
+*)
 
-   Evaluation:
+(** Evaluation:
 
                               t1 ==> t1'
                         ----------------------                         (ST_Inl)
@@ -321,8 +328,9 @@ Require Export Stlc.
             ----------------------------------------------         (ST_CaseInr)
             case (inr T v0) of inl x1 => t1 | inr x2 => t2
                            ==>  [x2:=v0]t2
-   
-Typing:
+*)
+
+(** Typing:
                           Gamma |- t1 :  T1
                      ----------------------------                       (T_Inl)
                      Gamma |- inl T2 t1 : T1 + T2
@@ -337,8 +345,8 @@ Typing:
          ---------------------------------------------------           (T_Case)
          Gamma |- case t0 of inl x1 => t1 | inr x2 => t2 : T
 
-    The reason for the type annotation on the [inl] and [inr] forms
-    has to do with uniqueness of types. *)
+    We use the type annotation in [inl] and [inr] to make the typing
+    simpler, similarly to what we did for functions. *)
 (** Without this extra
     information, the typing rule [T_Inl], for example, would have to
     say that, once we have shown that [t1] is an element of type [T1],
@@ -355,6 +363,8 @@ Typing:
     an injection.  This is rather heavyweight for programmers (and so
     real languages adopt other solutions), but it is easy to
     understand and formalize. *)
+
+
 
 (** ** Lists *)
 
@@ -384,10 +394,7 @@ Typing:
        | a::x' -> lcase x' of nil -> a
                      | b::x'' -> a+b 
 >>
-
-    While we say that [cons v1 v2] is a value, we really mean that
-    [v2] should also be a list -- we'll have to enforce this in the
-    formal definition of value. *)
+*)
 
 (**
     Syntax:
@@ -407,7 +414,9 @@ Typing:
            | ...
            | List T            list of Ts
 >>
-   Reduction:
+*)
+
+(** Reduction:
                                  t1 ==> t1'
                        --------------------------                    (ST_Cons1)
                        cons t1 t2 ==> cons t1' t2
@@ -428,8 +437,9 @@ Typing:
             -----------------------------------------------      (ST_LcaseCons)
             (lcase (cons vh vt) of nil -> t2 | xh::xt -> t3)
                           ==> [xh:=vh,xt:=vt]t3
+*)
 
-   Typing:
+(** Typing:
                           -----------------------                       (T_Nil)
                           Gamma |- nil T : List T
 
@@ -458,9 +468,9 @@ Typing:
    But this would require quite a bit of work to formalize: we'd have
    to introduce a notion of "function definitions" and carry around an
    "environment" of such definitions in the definition of the [step]
-   relation.
+   relation. *)
 
-   Here is another way that is straightforward to formalize: instead
+(** Here is another way that is straightforward to formalize: instead
    of writing recursive definitions where the right-hand side can
    contain the identifier being defined, we can define a _fixed-point
    operator_ that performs the "unfolding" of the recursive definition
@@ -605,7 +615,7 @@ if 3=0 then 1 else 3 * (fix F (pred 3))
 []
 *)
 
-(** **** Exercise: 1 star, recommended (fact_steps) *)
+(** **** Exercise: 1 star (fact_steps) *)
 (** Write down the sequence of steps that the term [fact 1] goes
     through to reduce to a normal form (assuming the usual reduction
     rules for arithmetic operations).
@@ -665,7 +675,7 @@ if 3=0 then 1 else 3 * (fix F (pred 3))
     heavier; for this reason, we postpone its formal treatment to a
     separate chapter ([Records]). Therefore records are not included
     in the extended exercise below, but they are used to motivate the
-    [Subtyping] chapter. *)
+    [Sub] chapter. *)
 
 (** Syntax:
 <<
@@ -691,8 +701,9 @@ if 3=0 then 1 else 3 * (fix F (pred 3))
    more precise, but these tend to be quite heavy and to obscure the
    main points of the definitions.  So we'll leave these a bit loose
    here (they are informal anyway, after all) and do the work of
-   tightening things up elsewhere (in chapter [Records]).
+   tightening things up elsewhere (in chapter [Records]). *)
 
+(**
    Reduction:
                               ti ==> ti'
                  ------------------------------------                  (ST_Rcd)
@@ -709,8 +720,9 @@ if 3=0 then 1 else 3 * (fix F (pred 3))
    is intended to be read "if [ti] is the leftmost field that is not a
    value and if [ti] steps to [ti'], then the whole record steps..."
    In the last rule, the intention is that there should only be one
-   field called i, and that all the other fields must contain values.
+   field called i, and that all the other fields must contain values. *)
 
+(**
    Typing:
             Gamma |- t1 : T1     ...     Gamma |- tn : Tn
           --------------------------------------------------            (T_Rcd)
@@ -851,7 +863,7 @@ if 3=0 then 1 else 3 * (fix F (pred 3))
 (* ###################################################################### *)
 (** * Exercise: Formalizing the Extensions *)
 
-(** **** Exercise: 4 stars, recommended (STLC_extensions) *)
+(** **** Exercise: 4 stars, advanced (STLC_extensions) *)
 (** Formalizing the extensions (not including the optional ones) is
     left to you.  We've provided the necessary extensions to the
     syntax of terms and types, and we've included a few examples that
@@ -955,9 +967,9 @@ Tactic Notation "t_cases" tactic(first) ident(c) :=
 Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
   match t with
   | tvar y => 
-      if beq_id x y then s else t
+      if eq_id_dec x y then s else t
   | tabs y T t1 => 
-      tabs y T (if beq_id x y then t1 else (subst x s t1))
+      tabs y T (if eq_id_dec x y then t1 else (subst x s t1))
   | tapp t1 t2 => 
       tapp (subst x s t1) (subst x s t2)
   (* FILL IN HERE *)
@@ -1016,20 +1028,23 @@ Definition context := partial_map ty.
 (** Next we define the typing rules.  These are nearly direct
     transcriptions of the inference rules shown above. *)
 
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+
 Inductive has_type : context -> tm -> ty -> Prop :=
   (* Typing rules for proper terms *)
   | T_Var : forall Gamma x T,
       Gamma x = Some T ->
-      has_type Gamma (tvar x) T
+      Gamma |- (tvar x) \in T
   | T_Abs : forall Gamma x T11 T12 t12,
-      has_type (extend Gamma x T11) t12 T12 -> 
-      has_type Gamma (tabs x T11 t12) (TArrow T11 T12)
+      (extend Gamma x T11) |- t12 \in T12 -> 
+      Gamma |- (tabs x T11 t12) \in (TArrow T11 T12)
   | T_App : forall T1 T2 Gamma t1 t2,
-      has_type Gamma t1 (TArrow T1 T2) -> 
-      has_type Gamma t2 T1 -> 
-      has_type Gamma (tapp t1 t2) T2
+      Gamma |- t1 \in (TArrow T1 T2) -> 
+      Gamma |- t2 \in T1 -> 
+      Gamma |- (tapp t1 t2) \in T2
   (* FILL IN HERE *)
-  .
+
+where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
 Hint Constructors has_type.
 
@@ -1082,7 +1097,7 @@ Notation eo := (Id 18).
     [auto].
 
     The following [Hint] declarations say that, whenever [auto]
-    arrives at a goal of the form [(has_type G (tapp e1 e1) T)], it
+    arrives at a goal of the form [(Gamma |- (tapp e1 e1) \in T)], it
     should consider [eapply T_App], leaving an existential variable
     for the middle type T1, and similar for [lcase]. That variable
     will then be filled in during the search for type derivations for
@@ -1122,7 +1137,7 @@ Definition test :=
 
 (* 
 Example typechecks :
-  has_type (@empty ty) test TNat.
+  (@empty ty) |- test \in TNat.
 Proof.
   unfold test.
   (* This typing derivation is quite deep, so we need to increase the
@@ -1155,7 +1170,7 @@ Definition test :=
 
 (* 
 Example typechecks :
-  has_type (@empty ty) test TNat.
+  (@empty ty) |- test \in TNat.
 Proof. unfold test. eauto 15. Qed.
 
 Example reduces :
@@ -1178,7 +1193,7 @@ Definition test :=
 
 (* 
 Example typechecks :
-  has_type (@empty ty) test TNat.
+  (@empty ty) |- test \in TNat.
 Proof. unfold test. eauto 15. Qed.
 
 Example reduces :
@@ -1203,7 +1218,7 @@ Definition test :=
 
 (* 
 Example typechecks :
-  has_type (@empty ty) test TNat.
+  (@empty ty) |- test \in TNat.
 Proof. unfold test. eauto 15. Qed.
 
 Example reduces :
@@ -1235,7 +1250,7 @@ Definition test :=
 
 (* 
 Example typechecks :
-  has_type (@empty ty) test (TProd TNat TNat).
+  (@empty ty) |- test \in (TProd TNat TNat).
 Proof. unfold test. eauto 15. Qed.
 
 Example reduces :
@@ -1263,7 +1278,7 @@ Definition test :=
 
 (* 
 Example typechecks :
-  has_type (@empty ty) test TNat.
+  (@empty ty) |- test \in TNat.
 Proof. unfold test. eauto 20. Qed.
 
 Example reduces :
@@ -1297,7 +1312,7 @@ Definition fact :=
 
 (* 
 Example fact_typechecks :
-  has_type (@empty ty) fact (TArrow TNat TNat).
+  (@empty ty) |- fact \in (TArrow TNat TNat).
 Proof. unfold fact. auto 10. 
 Qed.
 *)
@@ -1333,7 +1348,7 @@ Definition map :=
 (* 
 (* Make sure you've uncommented the last [Hint Extern] above... *)
 Example map_typechecks :
-  has_type empty map 
+  empty |- map \in 
     (TArrow (TArrow TNat TNat)
       (TArrow (TList TNat) 
         (TList TNat))).
@@ -1373,7 +1388,7 @@ Definition equal :=
 
 (* 
 Example equal_typechecks :
-  has_type (@empty ty) equal (TArrow TNat (TArrow TNat TNat)).
+  (@empty ty) |- equal \in (TArrow TNat (TArrow TNat TNat)).
 Proof. unfold equal. auto 10. 
 Qed.
 *)
@@ -1426,7 +1441,7 @@ Definition eotest :=
 
 (* 
 Example eotest_typechecks :
-  has_type (@empty ty) eotest (TProd TNat TNat).
+  (@empty ty) |- eotest \in (TProd TNat TNat).
 Proof. unfold eotest. eauto 30. 
 Qed.
 *)
@@ -1452,7 +1467,7 @@ End Examples.
 (** *** Progress *)
 
 Theorem progress : forall t T, 
-     has_type empty t T ->
+     empty |- t \in T ->
      value t \/ exists t', t ==> t'. 
 Proof with eauto.
   (* Theorem: Suppose empty |- t : T.  Then either
@@ -1520,9 +1535,9 @@ Inductive appears_free_in : id -> tm -> Prop :=
 Hint Constructors appears_free_in.
 
 Lemma context_invariance : forall Gamma Gamma' t S,
-     has_type Gamma t S  ->
+     Gamma |- t \in S  ->
      (forall x, appears_free_in x t -> Gamma x = Gamma' x)  ->
-     has_type Gamma' t S.
+     Gamma' |- t \in S.
 Proof with eauto.
   intros. generalize dependent Gamma'.
   has_type_cases (induction H) Case; 
@@ -1531,14 +1546,14 @@ Proof with eauto.
     apply T_Var... rewrite <- Heqv...
   Case "T_Abs".
     apply T_Abs... apply IHhas_type. intros y Hafi.
-    unfold extend. remember (beq_id x y) as e.
-    destruct e...
+    unfold extend. 
+    destruct (eq_id_dec x y)...
   (* FILL IN HERE *)
 Qed.
 
 Lemma free_in_context : forall x t T Gamma,
    appears_free_in x t ->
-   has_type Gamma t T ->
+   Gamma |- t \in T ->
    exists T', Gamma x = Some T'.
 Proof with eauto.
   intros x t T Gamma Hafi Htyp.
@@ -1546,7 +1561,7 @@ Proof with eauto.
   Case "T_Abs".
     destruct IHHtyp as [T' Hctx]... exists T'.
     unfold extend in Hctx. 
-    apply not_eq_beq_id_false in H2. rewrite H2 in Hctx...
+    rewrite neq_id in Hctx...
   (* FILL IN HERE *)
 Qed.
 
@@ -1554,9 +1569,9 @@ Qed.
 (** *** Substitution *)
 
 Lemma substitution_preserves_typing : forall Gamma x U v t S,
-     has_type (extend Gamma x U) t S  ->
-     has_type empty v U   ->
-     has_type Gamma ([x:=v]t) S.
+     (extend Gamma x U) |- t \in S  ->
+     empty |- v \in U   ->
+     Gamma |- ([x:=v]t) \in S.
 Proof with eauto.
   (* Theorem: If Gamma,x:U |- t : S and empty |- v : U, then 
      Gamma |- [x:=v]t : S. *)
@@ -1577,14 +1592,14 @@ Proof with eauto.
        show that [Gamma |- [x:=v]y : S].
 
        There are two cases to consider: either [x=y] or [x<>y]. *)
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y).
     SCase "x=y".
     (* If [x = y], then we know that [U = S], and that [[x:=v]y = v].
        So what we really must show is that if [empty |- v : U] then
        [Gamma |- v : U].  We have already proven a more general version
        of this theorem, called context invariance. *)
-      apply beq_id_eq in Heqe. subst.
-      unfold extend in H1. rewrite <- beq_id_refl in H1. 
+      subst.
+      unfold extend in H1. rewrite eq_id in H1. 
       inversion H1; subst. clear H1.
       eapply context_invariance...
       intros x Hcontra.
@@ -1593,7 +1608,7 @@ Proof with eauto.
     SCase "x<>y".
     (* If [x <> y], then [Gamma y = Some S] and the substitution has no
        effect.  We can show that [Gamma |- y : S] by [T_Var]. *)
-      apply T_Var... unfold extend in H1. rewrite <- Heqe in H1...
+      apply T_Var... unfold extend in H1. rewrite neq_id in H1...
   Case "tabs".
     rename i into y. rename t into T11.
     (* If [t = tabs y T11 t0], then we know that
@@ -1611,16 +1626,16 @@ Proof with eauto.
        We consider two cases: [x = y] and [x <> y].
     *)
     apply T_Abs...
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y).
     SCase "x=y".
     (* If [x = y], then the substitution has no effect.  Context
        invariance shows that [Gamma,y:U,y:T11] and [Gamma,y:T11] are
        equivalent.  Since the former context shows that [t0 : T12], so
        does the latter. *)
       eapply context_invariance...
-      apply beq_id_eq in Heqe. subst.
+      subst.
       intros x Hafi. unfold extend.
-      destruct (beq_id y x)...
+      destruct (eq_id_dec y x)...
     SCase "x<>y".
     (* If [x <> y], then the IH and context invariance allow us to show that
          [Gamma,x:U,y:T11 |- t0 : T12]       =>
@@ -1628,9 +1643,8 @@ Proof with eauto.
          [Gamma,y:T11 |- [x:=v]t0 : T12] *)
       apply IHt. eapply context_invariance...
       intros z Hafi. unfold extend.
-      remember (beq_id y z) as e0. destruct e0...
-      apply beq_id_eq in Heqe0. subst.
-      rewrite <- Heqe...
+      destruct (eq_id_dec y z)...
+      subst. rewrite neq_id...
   (* FILL IN HERE *)
 Qed.
 
@@ -1638,9 +1652,9 @@ Qed.
 (** *** Preservation *)
 
 Theorem preservation : forall t t' T,
-     has_type empty t T  ->
+     empty |- t \in T  ->
      t ==> t'  ->
-     has_type empty t' T.
+     empty |- t' \in T.
 Proof with eauto.
   intros t t' T HT.
   (* Theorem: If [empty |- t : T] and [t ==> t'], then [empty |- t' : T]. *)
@@ -1676,3 +1690,7 @@ Qed.
 (** [] *)
 
 End STLCExtended.
+
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+
+

@@ -1,6 +1,6 @@
 (** * UseTactics: Tactic Library for Coq: A Gentle Introduction *)
 
-(* $Date: 2012-08-08 20:21:51 -0400 (Wed, 08 Aug 2012) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 (* Chapter maintained by Arthur Chargueraud *)
 
 (** Coq comes with a set of builtin tactics, such as [reflexivity],
@@ -71,7 +71,7 @@ Theorem ceval_deterministic: forall c st st1 st2,
   st1 = st2.
 Proof.
   introv E1 E2. (* was [intros c st st1 st2 E1 E2] *)
-Admitted.
+Abort.
 
 (** When there is no hypothesis to be named, one can call 
     [introv] without any argument. *)
@@ -80,7 +80,7 @@ Theorem dist_exists_or : forall (X:Type) (P Q : X -> Prop),
   (exists x, P x \/ Q x) <-> (exists x, P x) \/ (exists x, Q x).
 Proof.
   introv. (* was [intros X P Q] *)
-Admitted.
+Abort.
 
 (** The tactic [introv] also applies to statements in which
     [forall] and [->] are interleaved. *)
@@ -89,19 +89,19 @@ Theorem ceval_deterministic': forall c st st1,
   (c / st || st1) -> forall st2, (c / st || st2) -> st1 = st2.
 Proof.
   introv E1 E2. (* was [intros c st st1 E1 st2 E2] *)
-Admitted.
+Abort.
 
 (** Like the arguments of [intros], the arguments of [introv] 
     can be structured patterns. *)
 
-(**Theorem exists_impl: forall X (P : X -> Prop) (Q : Prop) (R : Prop),
+Theorem exists_impl: forall X (P : X -> Prop) (Q : Prop) (R : Prop),
       (forall x, P x -> Q) ->
-      ((exists x : X, P x) -> Q).
+      ((exists x, P x) -> Q).
 Proof.
   introv [x H2]. eauto.
   (* same as [intros X P Q R H1 [x H2].], which is itself short 
      for [intros X P Q R H1 H2. destruct H2 as [x H2].] *)
-Qed. *)
+Qed.
 
 (** Remark: the tactic [introv] works even when definitions 
     need to be unfolded in order to reveal hypotheses. *)
@@ -132,7 +132,7 @@ Module InvertsExamples.
     that are being produced by [inversion]. *)
 
 Theorem skip_left: forall c,
-  cequiv (SKIP; c) c.
+  cequiv (SKIP;; c) c.
 Proof. 
   introv. split; intros H. 
   dup. (* duplicate the goal for comparison *)
@@ -140,7 +140,7 @@ Proof.
   inversion H. subst. inversion H2. subst. assumption.
   (* now: *)
   inverts H. inverts H2. assumption.
-Admitted.
+Abort.
 
 (** A slightly more interesting example appears next. *)
 
@@ -155,7 +155,7 @@ Proof.
   dup. (* duplicate the goal for comparison *)
   (* was: *) inversion E2. subst. admit.
   (* now: *) inverts E2. admit.
-Admitted.
+Abort.
 
 (** The tactic [inverts H as.] is like [inverts H] except that the 
     variables and hypotheses being produced are placed in the goal
@@ -198,7 +198,7 @@ Proof.
       (* new: *) intros.
       rewrite H in H5. inversion H5.
   (* The other cases are similiar *)
-Admitted.
+Abort.
 
 (** In the particular case where a call to [inversion] produces 
     a single subgoal, one can use the syntax [inverts H as H1 H2 H3] 
@@ -207,12 +207,12 @@ Admitted.
     equivalent to [inverts H as; introv H1 H2 H3]. An example follows. *)
 
 Theorem skip_left': forall c,
-  cequiv (SKIP; c) c.
+  cequiv (SKIP;; c) c.
 Proof. 
   introv. split; intros H.
   inverts H as U V. (* new hypotheses are named [U] and [V] *)
   inverts U. assumption.
-Admitted.
+Abort.
 
 (** A more involved example appears next. In particular, this example
     shows that the name of the hypothesis being inverted can be reused. *)
@@ -261,87 +261,6 @@ End InvertsExamples.
     indicates that the hypothesis should be kept in the context. *)
 
 
-(* ####################################################### *)
-(** ** The tactics [cases] and [cases_if] *)
-
-Module CasesExample.
-  Require Import Stlc.
-  Import STLC.
-
-(** As you probably have learned, the tactic [destruct] can be used
-    to perform a case analysis. However, this tactic sometimes destroys
-    useful information. The tactic [remember] is intended to introduce
-    an equality that avoids [destruct] loosing such useful information.
-    The tactic [cases] provided by [LibTactics] packages [remember]
-    and [destruct] together in order to shorten proof scripts.
-
-    The tactic [cases E] behaves like [remember E as x; destruct x],
-    only with the difference that it generates the symmetric of the
-    equality produced by [remember]. For example, [cases] would
-    produce the equality [beq_id k1 k2 = true] rather than the
-    equality [true = beq_id k1 k2]. Indeed, the former reads much more
-    naturally than the latter. Moreover, the syntax [cases E as H] allows 
-    to involve the [cases] tactic by specifying how to name the equality
-    generated.
-   
-    Remark: [cases] is quite similar to [case_eq]. For the sake of 
-    compatibility with [remember] and [case_eq], the library 
-    "LibTactics" provides a tactic called [cases'] that generates exactly 
-    the same equalities as [remember] or [case_eq] would, i.e., producing 
-    an equality in the form [true = beq_id k1 k2] rather than 
-    [beq_id k1 k2 = true]. The following examples illustrate the 
-    behavior of the tactic [cases' E as H]. *)
-
-Theorem update_same : forall x1 k1 k2 (f : state),
-  f k1 = x1 ->
-  (update f k1 x1) k2 = f k2.
-Proof.
-  intros x1 k1 k2 f Heq.
-  unfold update. subst. 
-  dup.
-  
-  (* The old proof: *)
-  remember (beq_id k1 k2) as b. destruct b.
-    apply beq_id_eq in Heqb. subst. reflexivity.
-    reflexivity.  
-
-  (* The new proof: *)
-  cases' (beq_id k1 k2) as E.
-    apply beq_id_eq in E. subst. reflexivity.
-    reflexivity.  
-Qed.
-
-(** The tactic [cases_if] is a tactic that allows performing a case
-    analysis without having to explicitly specify which value the
-    case analysis should be upon. More precisely, the tactic [cases_if]
-    looks in the goal or in the context for an expression of the form
-    [if E then .. else ..], and it invokes [cases E]. Remark: if there 
-    are several possibilities, [cases_if] only consider the first one.
-
-    The tactic [cases_if] thus saves the need to copy-past an expression
-    that occurs in the current proof obligation, leading to shorter and
-    more robust proof scripts.
-
-    Here again, for compatibility reasons, the library provides a tactic
-    called [cases_if']. Moreover, one may write [cases_if as H] or 
-    [cases_if' as H] for specifying the name to use for the generated
-    equality. *)
-
-Theorem update_same' : forall x1 k1 k2 (f : state),
-  f k1 = x1 ->
-  (update f k1 x1) k2 = f k2.
-Proof.
-  intros x1 k1 k2 f Heq.
-  unfold update. subst. 
- 
-  (* The new proof: *)
-  cases_if' as E.
-    apply beq_id_eq in E. subst. reflexivity.
-    reflexivity.  
-Qed.
-
-End CasesExample.
-
 
 
 (* ####################################################### *)
@@ -376,7 +295,7 @@ Lemma demo_splits : forall n m,
   n > 0 /\ n < m /\ m < n+10 /\ m <> 3.
 Proof.
   intros. splits.
-Admitted.
+Abort.
 
 
 (* ####################################################### *)
@@ -426,7 +345,7 @@ Proof with eauto.
         inversion Ht2p as [t2' [st' Hstep]].
         exists (tapp (tabs x T t) t2') st'...
         (* was: [exists (tapp (tabs x T t) t2'). exists st'...] *)
-Admitted.
+Abort.
 
 (** Remark: a similar facility for n-ary existentials is provided
     by the module [Coq.Program.Syntax] from the standard library.
@@ -505,7 +424,7 @@ Proof.
   intros. asserts_rewrite (forall a b, a*(S b) = a*b+a).
     (* first subgoal:  [forall a b, a*(S b) = a*b+a] *)
     (* second subgoal: [(u + v) * (w * x + y) + (u + v) = z] *)
-Admitted.
+Abort.
 
 
 (* ####################################################### *)
@@ -537,7 +456,7 @@ Lemma demo_fequals : forall (a b c d e : nat) (f : nat->nat->nat->nat->nat),
 Proof.
   intros. fequals. 
   (* subgoals [a = 1], [b = 2] and [c = c] are proved, [d = 4] remains *)
-Admitted.
+Abort.
 
 
 (* ####################################################### *)
@@ -585,7 +504,7 @@ Lemma demo_applys_eq_2 : forall (P:nat->nat->Prop) x y z,
   P (big_expression_using y) x.
 Proof.
   introv H. applys_eq H 2.
-Admitted.
+Abort.
 
 (** When we have a mismatch on two arguments, we want to produce
     two equalities. To achieve this, we may call [applys_eq H 1 2].
@@ -600,7 +519,7 @@ Proof.
   (* produces two subgoals:
      [big_expression_using x1 = big_expression_using x2]
      [big_expression_using y1 = big_expression_using y2] *)
-Admitted.
+Abort.
 
 End EqualityExamples.
 
@@ -739,8 +658,8 @@ Proof.
   eapply multi_step. skip. skip.
   (* Note that because some unification variables have
      not been instantiated, we still need to write
-     [Admitted] instead of [Qed] at the end of the proof. *)
-Admitted.
+     [Abort] instead of [Qed] at the end of the proof. *)
+Abort.
 
 (** The tactic [skip H: P] adds the hypothesis [H: P] to the context, 
     without checking whether the proposition [P] is true. 
@@ -750,7 +669,7 @@ Admitted.
 Theorem demo_skipH : True.
 Proof.
   skip H: (forall n m : nat, (0 + n) * m = n * m).
-Admitted.
+Abort.
 
 (** The tactic [skip_rewrite (E1 = E2)] replaces [E1] with [E2] in
     the goal, without checking that [E1] is actually equal to [E2]. *)
@@ -810,7 +729,7 @@ Proof.
     (* was: apply IHE1_2. assumption.] *)
     (* new: *) eapply IH. eapply E1_2. eapply Red2.
   (* The other cases are similiar. *)
-Admitted.
+Abort.
 
 End SkipExample.
 
@@ -835,7 +754,7 @@ Proof.
   (ceval_cases (induction E1) Case); intros st2 E2; inverts E2.
   admit. admit. (* Skipping some trivial cases *)
   sort. (* Observe how the context is reorganized *)
-Admitted.
+Abort.
 
 End SortExamples.
 
@@ -927,7 +846,7 @@ Lemma demo_lets_2 : forall (G:context) (x:id) (T:ty), True.
 Proof.
   intros G x T. 
   lets (S & Eq & Sub): typing_inversion_var G x T ___.
-Admitted.
+Abort.
 
 (** Usually, there is only one context [G] and one type [T] that are
     going to be suitable for proving [has_type G (tvar x) T], so
@@ -940,7 +859,7 @@ Lemma demo_lets_3 : forall (x:id), True.
 Proof.
   intros x. 
   lets (S & Eq & Sub): typing_inversion_var x ___.
-Admitted.
+Abort.
 
 (** We may go even further by not giving any argument to instantiate
     [typing_inversion_var]. In this case, three unification variables
@@ -949,7 +868,7 @@ Admitted.
 Lemma demo_lets_4 : True.
 Proof.
   lets (S & Eq & Sub): typing_inversion_var ___.
-Admitted.
+Abort.
 
 (** Note: if we provide [lets] with only the name of the lemma as 
     argument, it simply adds this lemma in the proof context, without 
@@ -958,7 +877,7 @@ Admitted.
 Lemma demo_lets_5 : True.
 Proof.
   lets H: typing_inversion_var.
-Admitted.
+Abort.
 
 (** A last useful feature of [lets] is the double-underscore symbol,
     which allows skipping an argument when several arguments have
@@ -982,7 +901,7 @@ Proof.
      the type [nat]). So, the variable [m] gets instiated as [3]. *)
   lets K: H __ 3. (* gives [K] of type [?X <= 3 -> ?X < 3+1] *)
     clear K.
-Admitted.
+Abort.
 
 
 (** Note: one can write [lets: E0 E1 E2] in place of [lets H: E0 E1 E2].
@@ -1048,10 +967,9 @@ Proof with eauto.
     (* old: destruct (typing_inversion_var _ _ _ Htypt) as [T [Hctx Hsub]].*)
     (* new: *) lets (T&Hctx&Hsub): typing_inversion_var Htypt.
     unfold extend in Hctx.
-    remember (beq_id x y) as e. destruct e... 
-    (* Note: [cases_if'] could be used to simplify the line above *)
+    destruct (eq_id_dec x y)...
     SCase "x=y".
-      apply beq_id_eq in Heqe. subst.
+      subst.
       inversion Hctx; subst. clear Hctx.
       apply context_invariance with empty...
       intros x Hcontra.
@@ -1080,18 +998,17 @@ Proof with eauto.
     (* old: apply T_Sub with (TArrow T1 T2)... *)
     (* new: *) applys T_Sub (TArrow T1 T2)...
      apply T_Abs...
-    remember (beq_id x y) as e. destruct e. 
+    destruct (eq_id_dec x y).
     SCase "x=y".
       eapply context_invariance...
-      apply beq_id_eq in Heqe. subst.
+      subst. 
       intros x Hafi. unfold extend.
-      destruct (beq_id y x)...
+      destruct (eq_id_dec y x)...
     SCase "x<>y".
       apply IHt. eapply context_invariance...
       intros z Hafi. unfold extend.
-      remember (beq_id y z) as e0. destruct e0...
-      apply beq_id_eq in Heqe0. subst.
-      rewrite <- Heqe...
+      destruct (eq_id_dec y z)...
+      subst. rewrite neq_id...
   Case "ttrue".
     lets: typing_inversion_true Htypt...
   Case "tfalse".

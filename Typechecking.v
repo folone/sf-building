@@ -1,6 +1,6 @@
 (** * MoreStlc: A Typechecker for STLC *)
 
-(* $Date: 2012-04-16 14:02:51 -0400 (Mon, 16 Apr 2012) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 
 Require Export Stlc.
 
@@ -112,9 +112,9 @@ Proof with eauto.
     destruct TO1 as [T1|]; try solve by inversion;
     destruct T1 as [|T11 T12]; try solve by inversion.
     destruct TO2 as [T2|]; try solve by inversion.
-    remember (beq_ty T11 T2) as b.
-    destruct b; try solve by inversion.
-    symmetry in Heqb. apply beq_ty__eq in Heqb.
+    destruct (beq_ty T11 T2) eqn: Heqb;
+    try solve by inversion.
+    apply beq_ty__eq in Heqb.
     inversion H0; subst...
   Case "tabs".
     rename i into y. rename t into T1.
@@ -132,9 +132,9 @@ Proof with eauto.
     destruct Tc; try solve by inversion.
     destruct TO1 as [T1|]; try solve by inversion.
     destruct TO2 as [T2|]; try solve by inversion.
-    remember (beq_ty T1 T2) as b.
-    destruct b; try solve by inversion.
-    symmetry in Heqb. apply beq_ty__eq in Heqb.
+    destruct (beq_ty T1 T2) eqn:Heqb;
+    try solve by inversion.
+    apply beq_ty__eq in Heqb.
     inversion H0. subst. subst...
 Qed.    
 

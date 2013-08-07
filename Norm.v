@@ -1,6 +1,6 @@
 (** * Norm: Normalization of STLC *)
 
-(* $Date: 2012-04-16 20:14:27 -0400 (Mon, 16 Apr 2012) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 (* Chapter maintained by Andrew Tolmach *)
 
 (* (Based on TAPL Ch. 12.) *)
@@ -97,8 +97,8 @@ Tactic Notation "t_cases" tactic(first) ident(c) :=
 
 Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
   match t with
-  | tvar y => if beq_id x y then s else t
-  | tabs y T t1 =>  tabs y T (if beq_id x y then t1 else (subst x s t1))
+  | tvar y => if eq_id_dec x y then s else t
+  | tabs y T t1 =>  tabs y T (if eq_id_dec x y then t1 else (subst x s t1))
   | tapp t1 t2 => tapp (subst x s t1) (subst x s t2)
   | tpair t1 t2 => tpair (subst x s t1) (subst x s t2)
   | tfst t1 => tfst (subst x s t1)
@@ -300,8 +300,7 @@ Proof with eauto.
     apply T_Var... rewrite <- Heqv...
   Case "T_Abs".
     apply T_Abs... apply IHhas_type. intros y Hafi.
-    unfold extend. remember (beq_id x y) as e.
-    destruct e...
+    unfold extend. destruct (eq_id_dec x y)...
   Case "T_Pair".
     apply T_Pair...
   Case "T_If".
@@ -318,7 +317,7 @@ Proof with eauto.
   Case "T_Abs".
     destruct IHHtyp as [T' Hctx]... exists T'.
     unfold extend in Hctx. 
-    apply not_eq_beq_id_false in H2. rewrite H2 in Hctx...
+    rewrite neq_id in Hctx... 
 Qed.
 
 Corollary typable_empty__closed : forall t T, 
@@ -356,14 +355,14 @@ Proof with eauto.
        show that [Gamma |- [x:=v]y : S].
 
        There are two cases to consider: either [x=y] or [x<>y]. *)
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y).
     SCase "x=y".
     (* If [x = y], then we know that [U = S], and that [[x:=v]y = v].
        So what we really must show is that if [empty |- v : U] then
        [Gamma |- v : U].  We have already proven a more general version
        of this theorem, called context invariance. *)
-      apply beq_id_eq in Heqe. subst.
-      unfold extend in H1. rewrite <- beq_id_refl in H1. 
+      subst. 
+      unfold extend in H1. rewrite eq_id in H1. 
       inversion H1; subst. clear H1.
       eapply context_invariance...
       intros x Hcontra.
@@ -372,7 +371,7 @@ Proof with eauto.
     SCase "x<>y".
     (* If [x <> y], then [Gamma y = Some S] and the substitution has no
        effect.  We can show that [Gamma |- y : S] by [T_Var]. *)
-      apply T_Var... unfold extend in H1. rewrite <- Heqe in H1...
+      apply T_Var... unfold extend in H1. rewrite neq_id in H1... 
   Case "tabs".
     rename i into y. rename t into T11.
     (* If [t = tabs y T11 t0], then we know that
@@ -390,16 +389,16 @@ Proof with eauto.
        We consider two cases: [x = y] and [x <> y].
     *)
     apply T_Abs...
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y). 
     SCase "x=y".
     (* If [x = y], then the substitution has no effect.  Context
        invariance shows that [Gamma,y:U,y:T11] and [Gamma,y:T11] are
        equivalent.  Since the former context shows that [t0 : T12], so
        does the latter. *)
       eapply context_invariance...
-      apply beq_id_eq in Heqe. subst.
+      subst. 
       intros x Hafi. unfold extend.
-      destruct (beq_id y x)...
+      destruct (eq_id_dec y x)...
     SCase "x<>y".
     (* If [x <> y], then the IH and context invariance allow us to show that
          [Gamma,x:U,y:T11 |- t0 : T12]       =>
@@ -407,9 +406,8 @@ Proof with eauto.
          [Gamma,y:T11 |- [x:=v]t0 : T12] *)
       apply IHt. eapply context_invariance...
       intros z Hafi. unfold extend.
-      remember (beq_id y z) as e0. destruct e0...
-      apply beq_id_eq in Heqe0. subst.
-      rewrite <- Heqe...
+      destruct (eq_id_dec y z)... 
+      subst. rewrite neq_id...    
 Qed.
 
 Theorem preservation : forall t t' T,
@@ -760,13 +758,13 @@ Fixpoint lookup {X:Set} (k : id) (l : list (id * X)) {struct l} : option X :=
   match l with
     | nil => None
     | (j,x) :: l' =>
-      if beq_id j k then Some x else lookup k l'
+      if eq_id_dec j k then Some x else lookup k l'
   end.
 
 Fixpoint drop {X:Set} (n:id) (nxs:list (id * X)) {struct nxs} : list (id * X) :=
   match nxs with
     | nil => nil
-    | ((n',x)::nxs') => if beq_id n' n then drop n nxs' else (n',x)::(drop n nxs')
+    | ((n',x)::nxs') => if eq_id_dec n' n then drop n nxs' else (n',x)::(drop n nxs')
   end.
 
 (** An _instantiation_ combines a type assignment and a value
@@ -803,13 +801,13 @@ Proof with eauto.  (* rather slow this way *)
   unfold closed, not. 
   t_cases (induction t) Case; intros x v P A; simpl in A. 
     Case "tvar". 
-     remember (beq_id x i) as e; destruct e... 
-       inversion A; subst. rewrite <- beq_id_refl in Heqe; inversion Heqe. 
+     destruct (eq_id_dec x i)...
+       inversion A; subst. auto. 
     Case "tapp". 
      inversion A; subst... 
     Case "tabs". 
-     remember (beq_id x i) as e; destruct e...
-       apply beq_id_eq in Heqe; subst. inversion A; subst...  
+     destruct (eq_id_dec x i)...
+       inversion A; subst...  
        inversion A; subst... 
     Case "tpair".
      inversion A; subst...
@@ -837,14 +835,11 @@ Lemma swap_subst : forall t x x1 v v1, x <> x1 -> closed v -> closed v1 ->
 Proof with eauto.
  t_cases (induction t) Case; intros; simpl.
   Case "tvar". 
-   remember (beq_id x i) as e; destruct e; remember (beq_id x1 i) as e; destruct e.
-      apply  beq_id_eq in Heqe. apply beq_id_eq in Heqe0. subst.
-         apply ex_falso_quodlibet...
-      apply beq_id_eq in Heqe; subst.  simpl. 
-         rewrite <- beq_id_refl.  apply subst_closed...
-      apply beq_id_eq in Heqe0; subst.  simpl. 
-         rewrite <- beq_id_refl. rewrite subst_closed...
-      simpl. rewrite <- Heqe. rewrite <- Heqe0... 
+   destruct (eq_id_dec x i); destruct (eq_id_dec x1 i). 
+      subst. apply ex_falso_quodlibet...
+      subst. simpl. rewrite eq_id. apply subst_closed...
+      subst. simpl. rewrite eq_id. rewrite subst_closed...
+      simpl. rewrite neq_id... rewrite neq_id... 
   (* FILL IN HERE *) Admitted.
 
 (* ###################################################################### *)
@@ -875,10 +870,8 @@ Proof.
     auto. 
     destruct a. simpl. 
     inversion H0. fold closed_env in H2.
-    remember (beq_id i x) as e; destruct e. 
-      apply  beq_id_eq in Heqe; subst. 
-        rewrite duplicate_subst; auto. 
-      symmetry in Heqe. apply beq_id_false_not_eq in Heqe. 
+    destruct (eq_id_dec i x).
+      subst. rewrite duplicate_subst; auto. 
       simpl. rewrite swap_subst; eauto. 
 Qed.
 
@@ -893,7 +886,7 @@ Proof.
   induction ss; intros. 
     reflexivity.
     destruct a. 
-     simpl. destruct (beq_id i x).
+     simpl. destruct (eq_id_dec i x).
       apply msubst_closed. inversion H; auto. 
       apply IHss. inversion H; auto. 
 Qed. 
@@ -904,7 +897,7 @@ Proof.
   induction ss; intros.
     reflexivity. 
     destruct a. 
-      simpl. destruct (beq_id i x); simpl; auto.
+      simpl. destruct (eq_id_dec i x); simpl; auto.
 Qed.
 
 Lemma msubst_app : forall ss t1 t2, msubst ss (tapp t1 t2) = tapp (msubst ss t1) (msubst ss t2).
@@ -929,23 +922,23 @@ Lemma mextend_lookup : forall (c : tass) (x:id), lookup x c = (mextend empty c) 
 Proof.
   induction c; intros. 
     auto.
-    destruct a. unfold lookup, mextend, extend. destruct (beq_id i x); auto.  
+    destruct a. unfold lookup, mextend, extend. destruct (eq_id_dec i x); auto.  
 Qed.
 
 Lemma mextend_drop : forall (c: tass) Gamma x x', 
-       mextend Gamma (drop x c) x' = if beq_id x x' then Gamma x' else mextend Gamma c x'.
+       mextend Gamma (drop x c) x' = if eq_id_dec x x' then Gamma x' else mextend Gamma c x'.
    induction c; intros. 
-      destruct (beq_id x x'); auto. 
+      destruct (eq_id_dec x x'); auto. 
       destruct a. simpl.
-      remember (beq_id i x) as e; destruct e. 
-        apply beq_id_eq in Heqe; subst. rewrite IHc. 
-            remember (beq_id x x') as e; destruct e.  auto. unfold extend. rewrite <- Heqe. auto. 
-        simpl.  unfold extend.  remember (beq_id i x') as e; destruct e.
-            apply beq_id_eq in Heqe0; subst.
-                              remember (beq_id x x') as e; destruct e. 
-                  apply beq_id_eq in Heqe0; subst.  rewrite <- beq_id_refl in Heqe.  inversion Heqe. 
-                  auto.
-            auto.
+      destruct (eq_id_dec i x).
+         subst. rewrite IHc. 
+            destruct (eq_id_dec x x').  auto. unfold extend. rewrite neq_id; auto. 
+         simpl. unfold extend.  destruct (eq_id_dec i x').
+            subst.
+               destruct (eq_id_dec x x'). 
+                  subst. exfalso. auto. 
+                  auto. 
+           auto. 
 Qed.
 
 
@@ -960,7 +953,7 @@ Proof.
   intros c e V. induction V; intros x0 T0 C.
     solve by inversion . 
     simpl in *.
-    destruct (beq_id x x0); eauto. 
+    destruct (eq_id_dec x x0); eauto. 
 Qed.
 
 Lemma instantiation_env_closed : forall c e,  instantiation c e -> closed_env e.
@@ -978,7 +971,7 @@ Lemma instantiation_R : forall c e, instantiation c e ->
 Proof.
   intros c e V. induction V; intros x' t' T' G E. 
     solve by inversion. 
-    unfold lookup in *.  destruct (beq_id x x'). 
+    unfold lookup in *.  destruct (eq_id_dec x x'). 
       inversion G; inversion E; subst.  auto.
       eauto. 
 Qed.
@@ -988,7 +981,7 @@ Lemma instantiation_drop : forall c env,
 Proof.
   intros c e V. induction V.  
     intros.  simpl.  constructor.  
-    intros. unfold drop. destruct (beq_id x x0); auto. constructor; eauto. 
+    intros. unfold drop. destruct (eq_id_dec x x0); auto. constructor; eauto. 
 Qed.
 
 
@@ -1057,11 +1050,11 @@ Proof.
      eapply T_Abs. eapply msubst_preserves_typing.  eapply instantiation_drop; eauto.  
       eapply context_invariance.  apply HT.  
       intros. 
-      unfold extend. rewrite mextend_drop. remember (beq_id x x0) as e; destruct e.  auto. 
+      unfold extend. rewrite mextend_drop. destruct (eq_id_dec x x0). auto.
         rewrite H.  
-          clear - c Heqe. induction c. 
-              simpl.  rewrite <- Heqe.  auto. 
-              simpl. destruct a.  unfold extend. destruct (beq_id i x0); auto. 
+          clear - c n. induction c. 
+              simpl.  rewrite neq_id; auto. 
+              simpl. destruct a.  unfold extend. destruct (eq_id_dec i x0); auto. 
     unfold R. fold R. split. 
        auto. 
      split. apply value_halts. apply v_abs.
@@ -1079,7 +1072,7 @@ Proof.
        apply (R_typable_empty H1). 
        eapply instantiation_env_closed; eauto. 
        eapply (IHHT ((x,T11)::c)).  
-          intros. unfold extend, lookup. destruct (beq_id x x0); auto. 
+          intros. unfold extend, lookup. destruct (eq_id_dec x x0); auto. 
        constructor; auto. 
 
   Case "T_App".

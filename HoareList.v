@@ -30,41 +30,36 @@ Require Export SfLib.
 Inductive id : Type := 
   Id : nat -> id.
 
-Definition beq_id id1 id2 :=
-  match (id1, id2) with
-    (Id n1, Id n2) => beq_nat n1 n2
-  end.
-
-Theorem beq_id_refl : forall i,
-  true = beq_id i i.
+Theorem eq_id_dec : forall id1 id2 : id, {id1 = id2} + {id1 <> id2}.
 Proof.
-  intros. destruct i.
-  apply beq_nat_refl.  Qed.
+   intros id1 id2.
+   destruct id1 as [n1]. destruct id2 as [n2].
+   destruct (eq_nat_dec n1 n2) as [Heq | Hneq].
+   Case "n1 = n2".
+     left. rewrite Heq. reflexivity.
+   Case "n1 <> n2".
+     right. intros contra. inversion contra. apply Hneq. apply H0.
+Defined. 
 
-Theorem beq_id_eq : forall i1 i2,
-  true = beq_id i1 i2 -> i1 = i2.
+Lemma eq_id : forall (T:Type) x (p q:T), 
+              (if eq_id_dec x x then p else q) = p. 
 Proof.
-  intros i1 i2 H.
-  destruct i1. destruct i2.
-  apply beq_nat_eq in H. subst.
-  reflexivity.  Qed.
+  intros. 
+  destruct (eq_id_dec x x). 
+  Case "x = x". 
+    reflexivity.
+  Case "x <> x (impossible)". 
+    apply ex_falso_quodlibet; apply n; reflexivity. Qed.
 
-Theorem beq_id_false_not_eq : forall i1 i2,
-  beq_id i1 i2 = false -> i1 <> i2.
+Lemma neq_id : forall (T:Type) x y (p q:T), x <> y -> 
+               (if eq_id_dec x y then p else q) = q. 
 Proof.
-  intros i1 i2 H.
-  destruct i1. destruct i2.
-  apply beq_nat_false in H.
-  intros C. apply H. inversion C. reflexivity.  Qed.
-
-Theorem not_eq_beq_id_false : forall i1 i2,
-  i1 <> i2 -> beq_id i1 i2 = false.
-Proof.
-  intros i1 i2 H.
-  destruct i1. destruct i2.
-  assert (n <> n0).
-    intros C. subst. apply H. reflexivity.
-  apply not_eq_beq_false. assumption.  Qed.
+  intros. 
+  destruct (eq_id_dec x y). 
+  Case "x = y (impossible)". 
+    subst. apply ex_falso_quodlibet; apply H; reflexivity.
+  Case "x <> y". 
+    reflexivity. Qed.
 
 Definition X : id := Id 0.
 Definition Y : id := Id 1.
@@ -89,7 +84,7 @@ Definition state := id -> val.
 
 Definition empty_state : state := fun _ => VNat 0.
 Definition update (st : state) (X:id) (v : val) : state :=
-  fun X' => if beq_id X X' then v else st X'. 
+  fun X' => if eq_id_dec X X' then v else st X'. 
 
 (** Imp does not have a static type system, so nothing prevents the
     programmer from e.g. adding two lists or taking the head of a
@@ -220,25 +215,26 @@ Theorem update_eq : forall n V st,
 Proof.
   intros n V st.
   unfold update.
-  rewrite <- beq_id_refl.
+  rewrite eq_id. 
   reflexivity.
 Qed.
 
 Theorem update_neq : forall V2 V1 n st,
-  beq_id V2 V1 = false ->
+  V2 <> V1 -> 
   (update st V2 n) V1 = (st V1).
 Proof.
   intros V2 V1 n st Hneq.
   unfold update.
-  rewrite -> Hneq.
-  reflexivity. Qed.
+  rewrite neq_id. 
+  reflexivity. 
+  assumption. Qed.
 
 Theorem update_shadow : forall x1 x2 k1 k2 (f : state),
    (update  (update f k2 x1) k2 x2) k1 = (update f k2 x2) k1.
 Proof.
   intros x1 x2 k1 k2 f.
   unfold update.
-  destruct (beq_id k2 k1); reflexivity.  Qed.
+  destruct (eq_id_dec k2 k1); reflexivity.  Qed.
 
 Theorem update_same : forall x1 k1 k2 (f : state),
   f k1 = x1 ->
@@ -246,29 +242,21 @@ Theorem update_same : forall x1 k1 k2 (f : state),
 Proof.
   intros x1 k1 k2 f Heq.
   unfold update. subst.
-  remember (beq_id k1 k2) as b.
-  destruct b.
-  Case "true".
-    apply beq_id_eq in Heqb. subst. reflexivity.
-  Case "false".
+  destruct (eq_id_dec k1 k2). 
+  Case "k1 = k2".
+    subst. reflexivity.
+  Case "k1 <> k2".
     reflexivity.  Qed.
 
 Theorem update_permute : forall x1 x2 k1 k2 k3 f,
-  beq_id k2 k1 = false -> 
+  k2 <> k1 -> 
   (update (update f k2 x1) k1 x2) k3 = (update (update f k1 x2) k2 x1) k3.
 Proof.
   intros x1 x2 k1 k2 k3 f H.
   unfold update.
-  remember (beq_id k1 k3) as b13.
-  remember (beq_id k2 k3) as b23.
-  apply beq_id_false_not_eq in H.
-  destruct b13; try reflexivity.
-  Case "true".
-    destruct b23; try reflexivity.
-    SCase "true".
-      apply beq_id_eq in Heqb13.
-      apply beq_id_eq in Heqb23.
-      subst. apply ex_falso_quodlibet. apply H. reflexivity.  Qed.
+  destruct (eq_id_dec k1 k3); try reflexivity.
+  Case "k1 = k3".
+      subst. rewrite neq_id. reflexivity. assumption. Qed.
 
 (** We can keep exactly the same old definitions of [com] and
     [ceval]. *)
@@ -360,8 +348,8 @@ Tactic Notation "ceval_cases" tactic(first) ident(c) :=
         {{P}} WHILE b DO c END {{P /\ ~b}}
 
                 {{P'}} c {{Q'}}
-                   P ~~> P'
-                   Q' ~~> Q
+                   P ->> P'
+                   Q' ->> Q
          -----------------------------   (hoare_consequence)
                 {{P}} c {{Q}}
 *)
@@ -463,12 +451,12 @@ Proof.
 Definition assert_implies (P Q : Assertion) : Prop :=
   forall st, P st -> Q st.
 
-Notation "P ~~> Q" := (assert_implies P Q) (at level 80).
-Notation "P <~~> Q" := (P ~~> Q /\ Q ~~> P) (at level 80).
+Notation "P ->> Q" := (assert_implies P Q) (at level 80).
+Notation "P <<->> Q" := (P ->> Q /\ Q ->> P) (at level 80).
 
 Theorem hoare_consequence_pre : forall (P P' Q : Assertion) c,
   {{P'}} c {{Q}} ->
-  P ~~> P' ->
+  P ->> P' ->
   {{P}} c {{Q}}.
 Proof.
   intros P P' Q c Hhoare Himp.
@@ -477,7 +465,7 @@ Proof.
 
 Theorem hoare_consequence_post : forall (P Q Q' : Assertion) c,
   {{P}} c {{Q'}} ->
-  Q' ~~> Q ->
+  Q' ->> Q ->
   {{P}} c {{Q}}.
 Proof.
   intros P Q Q' c Hhoare Himp.
@@ -488,8 +476,8 @@ Proof.
 
 Theorem hoare_consequence : forall (P P' Q Q' : Assertion) c,
   {{P'}} c {{Q'}} ->
-  P ~~> P' ->
-  Q' ~~> Q ->
+  P ->> P' ->
+  Q' ->> Q ->
   {{P}} c {{Q}}.
 Proof.
   intros P P' Q Q' c Hht HPP' HQ'Q.
@@ -655,30 +643,29 @@ Proof.
       intros st [[[H1 [p [H2 H3]]] H9] H10].
       unfold assn_sub. split.
       (* (st Y) is still n *)
-        rewrite update_neq; try reflexivity.  
-        rewrite update_neq; try reflexivity.
+        rewrite update_neq; try (intro X; inversion X). 
+        rewrite update_neq; try (intro X; inversion X). 
         assumption.
       (* and the interesting part of the invariant is preserved: *)
         (* X has to be a cons *)
-        remember (aslist (st X)) as x.
-        destruct x as [|h x'].
+        destruct (aslist (st X)) as [|h x'] eqn:Heqx. 
           unfold bassn in H9. unfold beval in H9. unfold aeval in H9. 
-          rewrite <- Heqx in H9. inversion H9.
+          rewrite -> Heqx in H9. inversion H9.
           
           exists (snoc p h).
           rewrite update_eq.
-          unfold aeval. rewrite update_neq; try reflexivity. 
-          rewrite <- Heqx.
+          unfold aeval. rewrite update_neq; try (intro X; inversion X). 
+          rewrite -> Heqx.
           split.
             rewrite snoc_equation. assumption.
 
-            rewrite update_neq; try reflexivity.
+            rewrite update_neq; try (intro X; inversion X). 
             rewrite update_eq. 
             split. 
               simpl.
               unfold bassn in H10. unfold beval in H10.
               unfold aeval in H10. rewrite H1 in H10. 
-              rewrite <- Heqx in H10. simpl in H10.
+              rewrite -> Heqx in H10. simpl in H10.
               rewrite (beq_nat_true _ _ H10).
               intros. apply appears_in_snoc1.
                 
@@ -689,22 +676,21 @@ Proof.
       intros st [[[H1 [p [H2 H3]]] H9] H10].
       split.
       (* (st Y) is still n *)
-        rewrite update_neq; try reflexivity.  
+        rewrite update_neq; try (intro X; inversion X). 
         assumption.
       (* and the interesting part of the invariant is preserved: *)
         (* X has to be a cons *)
-        remember (aslist (st X)) as x.
-        destruct x as [|h x'].
+        destruct (aslist (st X)) as [|h x'] eqn:Heqx.
           unfold bassn in H9. unfold beval in H9. unfold aeval in H9. 
-          rewrite <- Heqx in H9. inversion H9.
+          rewrite -> Heqx in H9. inversion H9.
 
           exists (snoc p h).
           split.
             rewrite update_eq.
-            unfold aeval. rewrite <- Heqx.
+            unfold aeval. rewrite -> Heqx.
             rewrite snoc_equation. assumption.
 
-            rewrite update_neq; try reflexivity.
+            rewrite update_neq; try (intro X; inversion X). 
             split.
               intros. apply appears_in_snoc2. apply H3. assumption.
 
@@ -717,7 +703,7 @@ Proof.
                 unfold bassn, beval, aeval in H10.
                 rewrite not_true_iff_false in H10.
                 apply beq_nat_false in H10. 
-                rewrite <- Heqx in H10. simpl in H10.
+                rewrite -> Heqx in H10. simpl in H10.
                 apply ex_falso_quodlibet. apply H10. assumption.
   (* The invariant holds at the start of the loop: *)
   intros st [H1 [H2 H3]]. 
@@ -906,28 +892,28 @@ Definition dec_correct (d:dcom) :=
 Fixpoint verification_conditions (P : Assertion) (d:dcom) : Prop :=
   match d with
   | DCSkip Q          => 
-      (P ~~> Q)
+      (P ->> Q)
   | DCSeq d1 d2      => 
       verification_conditions P d1
       /\ verification_conditions (post d1) d2
   | DCAsgn X a Q      => 
-      (P ~~> assn_sub X a Q)
+      (P ->> assn_sub X a Q)
   | DCIf b P1 d1 P2 d2 Q => 
-      ((fun st => P st /\ bassn b st) ~~> P1)
-      /\ ((fun st => P st /\ ~ (bassn b st)) ~~> P2)
+      ((fun st => P st /\ bassn b st) ->> P1)
+      /\ ((fun st => P st /\ ~ (bassn b st)) ->> P2)
       /\ (Q = post d1) /\ (Q = post d2)
       /\ verification_conditions P1 d1
       /\ verification_conditions P2 d2
   | DCWhile b Pbody d Ppost      => 
       (* post d is the loop invariant and the initial precondition *)
-      (P ~~> post d)  
+      (P ->> post d)  
       /\ (Pbody = (fun st => post d st /\ bassn b st))
       /\ (Ppost = (fun st => post d st /\ ~(bassn b st)))
       /\ verification_conditions Pbody d
   | DCPre P' d         => 
-      (P ~~> P') /\ verification_conditions P' d
+      (P ->> P') /\ verification_conditions P' d
   | DCPost d Q        => 
-      verification_conditions P d /\ (post d ~~> Q)
+      verification_conditions P d /\ (post d ->> Q)
   end.
 
 Theorem verification_correct : forall d P, 
@@ -975,7 +961,7 @@ Tactic Notation "verify" :=
   unfold bassn in *; unfold beval in *; unfold aeval in *;
   unfold assn_sub; intros;
   repeat rewrite update_eq;
-  repeat (rewrite update_neq; [| reflexivity]);
+  repeat (rewrite update_neq; [| (intro X; inversion X)]);
   simpl in *; 
   repeat match goal with [H : _ /\ _ |- _] => destruct H end;
   repeat rewrite not_true_iff_false in *;
@@ -1070,8 +1056,7 @@ Proof.
   Case "IF taken".
     destruct H2 as [p [H3 H4]].
     (* We know X is non-nil. *)
-    remember (aslist (st X)) as x.
-    destruct x as [|h x'].
+    destruct (aslist (st X)) as [|h x'].
       inversion H1.
       exists (snoc p h).
       simpl. split.
@@ -1084,8 +1069,7 @@ Proof.
   Case "If not taken".
     destruct H2 as [p [H3 H4]].
     (* We know X is non-nil. *)
-    remember (aslist (st X)) as x.
-    destruct x as [|h x'].
+    destruct (aslist (st X)) as [|h x'].
       inversion H1.
       exists (snoc p h).
       split. simpl.

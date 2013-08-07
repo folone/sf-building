@@ -10,3 +10,6 @@
 *.sty
 *.out
 *.tm
+*.g
+*.v.beautified
+html/

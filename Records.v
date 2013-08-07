@@ -1,6 +1,7 @@
 (** * Records: Adding Records to STLC *)
 
-(* $Date: 2012-04-23 14:08:14 -0400 (Mon, 23 Apr 2012) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+
 
 Require Export Stlc.
 
@@ -222,8 +223,8 @@ Hint Constructors record_ty record_tm well_formed_ty.
 
 Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
   match t with
-  | tvar y => if beq_id x y then s else t
-  | tabs y T t1 =>  tabs y T (if beq_id x y then t1 else (subst x s t1))
+  | tvar y => if eq_id_dec x y then s else t
+  | tabs y T t1 =>  tabs y T (if eq_id_dec x y then t1 else (subst x s t1))
   | tapp t1 t2 => tapp (subst x s t1) (subst x s t2)
   | tproj t1 i => tproj (subst x s t1) i
   | trnil => trnil
@@ -254,13 +255,13 @@ Hint Constructors value.
 
 Fixpoint Tlookup (i:id) (Tr:ty) : option ty :=
   match Tr with
-  | TRCons i' T Tr' => if beq_id i i' then Some T else Tlookup i Tr'
+  | TRCons i' T Tr' => if eq_id_dec i i' then Some T else Tlookup i Tr'
   | _ => None
   end.
 
 Fixpoint tlookup (i:id) (tr:tm) : option tm :=
   match tr with
-  | trcons i' t tr' => if beq_id i i' then Some t else tlookup i tr'
+  | trcons i' t tr' => if eq_id_dec i i' then Some t else tlookup i tr'
   | _ => None
   end.
 
@@ -340,32 +341,36 @@ Definition context := partial_map ty.
     In the rules you must write, the only necessary [well_formed_ty]
     check comes in the [tnil] case.  *)
 
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
+
 Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Var : forall Gamma x T,
       Gamma x = Some T ->
       well_formed_ty T ->
-      has_type Gamma (tvar x) T
+      Gamma |- (tvar x) \in T
   | T_Abs : forall Gamma x T11 T12 t12,
       well_formed_ty T11 ->
-      has_type (extend Gamma x T11) t12 T12 -> 
-      has_type Gamma (tabs x T11 t12) (TArrow T11 T12)
+      (extend Gamma x T11) |- t12 \in T12 -> 
+      Gamma |- (tabs x T11 t12) \in (TArrow T11 T12)
   | T_App : forall T1 T2 Gamma t1 t2,
-      has_type Gamma t1 (TArrow T1 T2) -> 
-      has_type Gamma t2 T1 -> 
-      has_type Gamma (tapp t1 t2) T2
+      Gamma |- t1 \in (TArrow T1 T2) -> 
+      Gamma |- t2 \in T1 -> 
+      Gamma |- (tapp t1 t2) \in T2
   (* records: *)
   | T_Proj : forall Gamma i t Ti Tr,
-      has_type Gamma t Tr ->
+      Gamma |- t \in Tr ->
       Tlookup i Tr = Some Ti ->
-      has_type Gamma (tproj t i) Ti
+      Gamma |- (tproj t i) \in Ti
   | T_RNil : forall Gamma,
-      has_type Gamma trnil TRNil
+      Gamma |- trnil \in TRNil
   | T_RCons : forall Gamma i t T tr Tr,
-      has_type Gamma t T ->
-      has_type Gamma tr Tr ->
+      Gamma |- t \in T ->
+      Gamma |- tr \in Tr ->
       record_ty Tr ->
       record_tm tr ->
-      has_type Gamma (trcons i t tr) (TRCons i T Tr).
+      Gamma |- (trcons i t tr) \in (TRCons i T Tr)
+
+where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
 Hint Constructors has_type.
 
@@ -387,14 +392,14 @@ Tactic Notation "has_type_cases" tactic(first) ident(c) :=
     perhaps compress it using automation. *)
 
 Lemma typing_example_2 : 
-  has_type empty 
+  empty |- 
     (tapp (tabs a (TRCons i1 (TArrow A A)
                       (TRCons i2 (TArrow B B)
                        TRNil))
               (tproj (tvar a) i2))
             (trcons i1 (tabs a A (tvar a)) 
             (trcons i2 (tabs a B (tvar a))
-             trnil)))
+             trnil))) \in
     (TArrow B B).
 Proof. 
   (* FILL IN HERE *) Admitted.
@@ -404,19 +409,19 @@ Proof.
 
 Example typing_nonexample : 
   ~ exists T,
-      has_type (extend empty a (TRCons i2 (TArrow A A) 
-                                TRNil))
-               (trcons i1 (tabs a B (tvar a)) (tvar a))
+      (extend empty a (TRCons i2 (TArrow A A) 
+                                TRNil)) |-
+               (trcons i1 (tabs a B (tvar a)) (tvar a)) \in
                T.
 Proof.
   (* FILL IN HERE *) Admitted.
 
 Example typing_nonexample_2 : forall y,
   ~ exists T,
-    has_type (extend empty y A)
+    (extend empty y A) |-
            (tapp (tabs a (TRCons i1 A TRNil)
                      (tproj (tvar a) i1))
-                   (trcons i1 (tvar y) (trcons i2 (tvar y) trnil)))
+                   (trcons i1 (tvar y) (trcons i2 (tvar y) trnil))) \in
            T.
 Proof.
   (* FILL IN HERE *) Admitted.
@@ -440,7 +445,7 @@ Proof with eauto.
   T_cases (induction T) Case; intros; try solve by inversion.
   Case "TRCons".
     inversion H. subst. unfold Tlookup in H0.
-    remember (beq_id i i0) as b. destruct b; subst...
+    destruct (eq_id_dec i i0)...
     inversion H0. subst...  Qed.
 
 Lemma step_preserves_record_tm : forall tr tr',
@@ -453,7 +458,7 @@ Proof.
 Qed.
 
 Lemma has_type__wf : forall Gamma t T,
-  has_type Gamma t T -> well_formed_ty T.
+  Gamma |- t \in T -> well_formed_ty T.
 Proof with eauto.
   intros Gamma t T Htyp.
   has_type_cases (induction Htyp) Case...
@@ -468,7 +473,7 @@ Qed.
 
 (** Lemma: If [empty |- v : T] and [Tlookup i T] returns [Some Ti],
      then [tlookup i v] returns [Some ti] for some term [ti] such
-     that [has_type empty ti Ti].
+     that [empty |- ti \in Ti].
 
     Proof: By induction on the typing derivation [Htyp].  Since
       [Tlookup i T = Some Ti], [T] must be a record type, this and
@@ -494,15 +499,15 @@ Qed.
 
 Lemma lookup_field_in_value : forall v T i Ti,
   value v ->
-  has_type empty v T ->
+  empty |- v \in T ->
   Tlookup i T = Some Ti ->
-  exists ti, tlookup i v = Some ti /\ has_type empty ti Ti.
+  exists ti, tlookup i v = Some ti /\ empty |- ti \in Ti.
 Proof with eauto.
   intros v T i Ti Hval Htyp Hget.
   remember (@empty ty) as Gamma.
   has_type_cases (induction Htyp) Case; subst; try solve by inversion...
   Case "T_RCons".
-    simpl in Hget. simpl. destruct (beq_id i i0).
+    simpl in Hget. simpl. destruct (eq_id_dec i i0).
     SCase "i is first".
       simpl. inversion Hget. subst.
       exists t...
@@ -514,7 +519,7 @@ Proof with eauto.
 (** *** Progress *)
 
 Theorem progress : forall t T, 
-     has_type empty t T ->
+     empty |- t \in T ->
      value t \/ exists t', t ==> t'. 
 Proof with eauto.
   (* Theorem: Suppose empty |- t : T.  Then either
@@ -633,9 +638,9 @@ Inductive appears_free_in : id -> tm -> Prop :=
 Hint Constructors appears_free_in.
 
 Lemma context_invariance : forall Gamma Gamma' t S,
-     has_type Gamma t S  ->
+     Gamma |- t \in S  ->
      (forall x, appears_free_in x t -> Gamma x = Gamma' x)  ->
-     has_type Gamma' t S.
+     Gamma' |- t \in S.
 Proof with eauto.
   intros. generalize dependent Gamma'.
   has_type_cases (induction H) Case; 
@@ -644,8 +649,7 @@ Proof with eauto.
     apply T_Var... rewrite <- Heqv...
   Case "T_Abs".
     apply T_Abs... apply IHhas_type. intros y Hafi.
-    unfold extend. remember (beq_id x y) as e.
-    destruct e...
+    unfold extend. destruct (eq_id_dec x y)...
   Case "T_App".
     apply T_App with T1...
   Case "T_RCons".
@@ -653,7 +657,7 @@ Proof with eauto.
 
 Lemma free_in_context : forall x t T Gamma,
    appears_free_in x t ->
-   has_type Gamma t T ->
+   Gamma |- t \in T ->
    exists T', Gamma x = Some T'.
 Proof with eauto.
   intros x t T Gamma Hafi Htyp.
@@ -661,16 +665,16 @@ Proof with eauto.
   Case "T_Abs".
     destruct IHHtyp as [T' Hctx]... exists T'.
     unfold extend in Hctx. 
-    apply not_eq_beq_id_false in H3. rewrite H3 in Hctx...
+    rewrite neq_id in Hctx... 
 Qed.
 
 (* ###################################################################### *)
 (** *** Preservation *)
 
 Lemma substitution_preserves_typing : forall Gamma x U v t S,
-     has_type (extend Gamma x U) t S  ->
-     has_type empty v U   ->
-     has_type Gamma ([x:=v]t) S.
+     (extend Gamma x U) |- t \in S  ->
+     empty |- v \in U   ->
+     Gamma |- ([x:=v]t) \in S.
 Proof with eauto.
   (* Theorem: If Gamma,x:U |- t : S and empty |- v : U, then 
      Gamma |- ([x:=v]t) S. *)
@@ -693,14 +697,14 @@ Proof with eauto.
        show that [Gamma |- [x:=v]y : S].
 
        There are two cases to consider: either [x=y] or [x<>y]. *)
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y). 
     SCase "x=y".
     (* If [x = y], then we know that [U = S], and that [[x:=v]y = v].
        So what we really must show is that if [empty |- v : U] then
        [Gamma |- v : U].  We have already proven a more general version
        of this theorem, called context invariance. *)
-      apply beq_id_eq in Heqe. subst.
-      unfold extend in H0. rewrite <- beq_id_refl in H0. 
+      subst.
+      unfold extend in H0. rewrite eq_id in H0. 
       inversion H0; subst. clear H0.
       eapply context_invariance...
       intros x Hcontra.
@@ -709,7 +713,7 @@ Proof with eauto.
     SCase "x<>y".
     (* If [x <> y], then [Gamma y = Some S] and the substitution has no
        effect.  We can show that [Gamma |- y : S] by [T_Var]. *)
-      apply T_Var... unfold extend in H0. rewrite <- Heqe in H0...
+      apply T_Var... unfold extend in H0. rewrite neq_id in H0... 
   Case "tabs".
     rename i into y. rename t into T11.
     (* If [t = tabs y T11 t0], then we know that
@@ -727,16 +731,16 @@ Proof with eauto.
        We consider two cases: [x = y] and [x <> y].
     *)
     apply T_Abs...
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y).
     SCase "x=y".
     (* If [x = y], then the substitution has no effect.  Context
        invariance shows that [Gamma,y:U,y:T11] and [Gamma,y:T11] are
        equivalent.  Since the former context shows that [t0 : T12], so
        does the latter. *)
       eapply context_invariance...
-      apply beq_id_eq in Heqe. subst.
+      subst.
       intros x Hafi. unfold extend.
-      destruct (beq_id y x)...
+      destruct (eq_id_dec y x)...
     SCase "x<>y".
     (* If [x <> y], then the IH and context invariance allow us to show that
          [Gamma,x:U,y:T11 |- t0 : T12]       =>
@@ -744,17 +748,16 @@ Proof with eauto.
          [Gamma,y:T11 |- [x:=v]t0 : T12] *)
       apply IHt. eapply context_invariance...
       intros z Hafi. unfold extend.
-      remember (beq_id y z) as e0. destruct e0...
-      apply beq_id_eq in Heqe0. subst.
-      rewrite <- Heqe...
+      destruct (eq_id_dec y z)... 
+      subst. rewrite neq_id...
   Case "trcons".
     apply T_RCons... inversion H7; subst; simpl...
 Qed.
 
 Theorem preservation : forall t t' T,
-     has_type empty t T  ->
+     empty |- t \in T  ->
      t ==> t'  ->
-     has_type empty t' T.
+     empty |- t' \in T.
 Proof with eauto.
   intros t t' T HT.
   (* Theorem: If [empty |- t : T] and [t ==> t'], then [empty |- t' : T]. *)
@@ -792,7 +795,7 @@ Proof with eauto.
      consider [T_ProjRcd].
 
      Here we have that [t] is a record value.  Since rule T_Proj was
-     used, we know [has_type empty t Tr] and [Tlookup i Tr = Some
+     used, we know [empty |- t \in Tr] and [Tlookup i Tr = Some
      Ti] for some [i] and [Tr].  We may therefore apply lemma
      [lookup_field_in_value] to find the record element this
      projection steps to. *)

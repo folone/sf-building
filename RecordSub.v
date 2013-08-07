@@ -1,7 +1,5 @@
 (** * RecordSub: Subtyping with Records *)
 
-(* $Date: 2012-04-16 20:14:27 -0400 (Mon, 16 Apr 2012) $ *)
-
 Require Export MoreStlc.
 
 (* ###################################################### *)
@@ -79,8 +77,8 @@ Hint Constructors record_ty record_tm well_formed_ty.
 
 Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
   match t with
-  | tvar y => if beq_id x y then s else t
-  | tabs y T t1 =>  tabs y T (if beq_id x y then t1 else (subst x s t1))
+  | tvar y => if eq_id_dec x y then s else t
+  | tabs y T t1 =>  tabs y T (if eq_id_dec x y then t1 else (subst x s t1))
   | tapp t1 t2 => tapp (subst x s t1) (subst x s t2)
   | tproj t1 i => tproj (subst x s t1) i
   | trnil => trnil
@@ -105,13 +103,13 @@ Hint Constructors value.
 
 Fixpoint Tlookup (i:id) (Tr:ty) : option ty :=
   match Tr with
-  | TRCons i' T Tr' => if beq_id i i' then Some T else Tlookup i Tr'
+  | TRCons i' T Tr' => if eq_id_dec i i' then Some T else Tlookup i Tr'
   | _ => None
   end.
 
 Fixpoint tlookup (i:id) (tr:tm) : option tm :=
   match tr with
-  | trcons i' t tr' => if beq_id i i' then Some t else tlookup i tr'
+  | trcons i' t tr' => if eq_id_dec i i' then Some t else tlookup i tr'
   | _ => None
   end.
 
@@ -308,8 +306,7 @@ Proof with eauto.
   T_cases (induction T) Case; intros; try solve by inversion.
   Case "TRCons".
     inversion H. subst. unfold Tlookup in H0.
-    remember (beq_id i i0) as b. destruct b; subst...
-    inversion H0. subst...  Qed.
+    destruct (eq_id_dec i i0)...  inversion H0; subst...  Qed.
 
 (** *** Field Lookup *)
 
@@ -337,19 +334,18 @@ Proof with (eauto using wf_rcd_lookup).
   Case "S_RcdDepth". 
     rename i0 into k.
     unfold Tlookup. unfold Tlookup in Hget. 
-    remember (beq_id i k) as b. destruct b...
+    destruct (eq_id_dec i k)...
     SCase "i = k -- we're looking up the first field".
       inversion Hget. subst. exists S1...
   Case "S_RcdPerm".
     exists Ti. split.
     SCase "lookup".
       unfold Tlookup. unfold Tlookup in Hget. 
-      remember (beq_id i i1) as b. destruct b...
+      destruct (eq_id_dec i i1)...
       SSCase "i = i1 -- we're looking up the first field".
-        remember (beq_id i i2) as b. destruct b...
+        destruct (eq_id_dec i i2)...
         SSSCase "i = i2 - -contradictory".
           destruct H0.
-          apply beq_id_eq in Heqb. apply beq_id_eq in Heqb0.
           subst...  
     SCase "subtype".
       inversion H. subst. inversion H5. subst...  Qed.
@@ -380,7 +376,9 @@ Proof with eauto.
 Definition context := id -> (option ty).
 Definition empty : context := (fun _ => None). 
 Definition extend (Gamma : context) (x:id) (T : ty) :=
-  fun x' => if beq_id x x' then Some T else Gamma x'.
+  fun x' => if eq_id_dec x x' then Some T else Gamma x'.
+
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 
 Inductive has_type : context -> tm -> ty -> Prop :=
   | T_Var : forall Gamma x T,
@@ -412,7 +410,9 @@ Inductive has_type : context -> tm -> ty -> Prop :=
       has_type Gamma tr Tr ->
       record_ty Tr ->
       record_tm tr ->
-      has_type Gamma (trcons i t tr) (TRCons i T Tr).
+      has_type Gamma (trcons i t tr) (TRCons i T Tr)
+
+where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
 Hint Constructors has_type.
 
@@ -513,7 +513,7 @@ Proof with eauto.
     destruct (IHHtyp Si) as [vi [Hget Htyvi]]...    
   Case "T_RCons".
     simpl in H0. simpl. simpl in H1.
-    remember (beq_id i i0) as b. destruct b.
+    destruct (eq_id_dec i i0).
     SCase "i is first".
       inversion H1. subst. exists t...
     SCase "i in tail".
@@ -786,8 +786,7 @@ Proof with eauto.
     apply T_Var... rewrite <- Heqv...
   Case "T_Abs".
     apply T_Abs... apply IHhas_type. intros x0 Hafi.
-    unfold extend. remember (beq_id x x0) as e.
-    destruct e...
+    unfold extend. destruct (eq_id_dec x x0)...
   Case "T_App".
     apply T_App with T1...
   Case "T_RCons".
@@ -802,8 +801,7 @@ Proof with eauto.
   has_type_cases (induction Htyp) Case; subst; inversion Hafi; subst...
   Case "T_Abs".
     destruct (IHHtyp H5) as [T Hctx]. exists T.
-    unfold extend in Hctx. apply not_eq_beq_id_false in H3. 
-    rewrite H3 in Hctx...  Qed.
+    unfold extend in Hctx. rewrite neq_id in Hctx...  Qed.
 
 (* ########################################## *)
 (** *** Preservation *)
@@ -820,9 +818,9 @@ Proof with eauto.
     rename i into y.
     destruct (typing_inversion_var _ _ _ Htypt) as [T [Hctx Hsub]].
     unfold extend in Hctx.
-    remember (beq_id x y) as e. destruct e...
+    destruct (eq_id_dec x y)...
     SCase "x=y".
-      apply beq_id_eq in Heqe. subst.
+      subst.
       inversion Hctx; subst. clear Hctx.
       apply context_invariance with empty...
       intros x Hcontra.
@@ -840,18 +838,17 @@ Proof with eauto.
     destruct (subtype__wf _ _ Hsub) as [Hwf1 Hwf2].
     inversion Hwf2. subst.
     apply T_Sub with (TArrow T1 T2)... apply T_Abs...
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y).
     SCase "x=y".
       eapply context_invariance...
-      apply beq_id_eq in Heqe. subst.
+      subst.
       intros x Hafi. unfold extend.
-      destruct (beq_id y x)...
+      destruct (eq_id_dec y x)...
     SCase "x<>y".
       apply IHt. eapply context_invariance...
       intros z Hafi. unfold extend.
-      remember (beq_id y z) as e0. destruct e0...
-      apply beq_id_eq in Heqe0. subst.
-      rewrite <- Heqe...
+      destruct (eq_id_dec y z)...
+      subst.  rewrite neq_id... 
   Case "tproj".
     destruct (typing_inversion_proj _ _ _ _ Htypt) 
       as [T [Ti [Hget [Hsub Htypt1]]]]...
@@ -997,4 +994,6 @@ Proof with eauto.
 []
 *)
 
+
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 

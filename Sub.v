@@ -1,6 +1,5 @@
 (** * Sub: Subtyping *)
 
-(* $Date: 2012-07-17 18:18:15 -0400 (Tue, 17 Jul 2012) $ *)
 
 Require Export MoreStlc.
 
@@ -106,6 +105,16 @@ Require Export MoreStlc.
     Languages_, if you are interested.)  Instead, we'll study the core
     concepts behind the subclass / subinterface relation in the
     simplified setting of the STLC. *)
+
+(** *** *)
+(** Of course, real OO languages have lots of other features...
+       - mutable fields
+       - [private]
+       - method inheritance
+       - static fields
+       - etc., etc.
+
+    We'll ignore all these and focus on core mechanisms. *)
 
 (** ** The Subsumption Rule *)
 
@@ -218,7 +227,8 @@ Require Export MoreStlc.
     viewed as having type [T1->T2]. 
 *)
 
-(** **** Exercise: 2 stars, recommended (arrow_sub_wrong) *)
+
+(** **** Exercise: 2 stars (arrow_sub_wrong) *)
 (** Suppose we had incorrectly defined subtyping as covariant on both
     the right and the left of arrow types:
                             S1 <: T1    S2 <: T2
@@ -237,9 +247,9 @@ Require Export MoreStlc.
 
 (** *** Records *)
 
-(** What about subtyping for record types?  
+(** What about subtyping for record types? *)
 
-   The basic intuition about subtyping for record types is that it is
+(** The basic intuition about subtyping for record types is that it is
    always safe to use a "bigger" record in place of a "smaller" one.
    That is, given a record type, adding extra fields will always
    result in a subtype.  If some code is expecting a record with
@@ -251,9 +261,9 @@ Require Export MoreStlc.
        {name:String, age:Nat} <: {name:String}
        {name:String} <: {}
 >>
-   This is known as "width subtyping" for records.
+   This is known as "width subtyping" for records. *)
 
-   We can also create a subtype of a record type by replacing the type
+(** We can also create a subtype of a record type by replacing the type
    of one of its fields with a subtype.  If some code is expecting a
    record with a field [x] of type [T], it will be happy with a record
    having a field [x] of type [S] as long as [S] is a subtype of
@@ -261,16 +271,16 @@ Require Export MoreStlc.
 <<
        {x:Student} <: {x:Person}
 >>
-   This is known as "depth subtyping".
+   This is known as "depth subtyping". *)
 
-   Finally, although the fields of a record type are written in a
+(** Finally, although the fields of a record type are written in a
    particular order, the order does not really matter. For example, 
 <<
        {name:String,age:Nat} <: {age:Nat,name:String}
 >>
-   This is known as "permutation subtyping".
+   This is known as "permutation subtyping". *)
 
-   We could formalize these requirements in a single subtyping rule
+(** We could formalize these requirements in a single subtyping rule
    for records as follows:
                         for each jk in j1..jn,
                     exists ip in i1..im, such that
@@ -282,25 +292,25 @@ Require Export MoreStlc.
    common fields should be in the subtype relation. However, this rule
    is rather heavy and hard to read.  If we like, we can decompose it
    into three simpler rules, which can be combined using [S_Trans] to
-   achieve all the same effects.
+   achieve all the same effects. *)
 
-    First, adding fields to the end of a record type gives a subtype:
+(** First, adding fields to the end of a record type gives a subtype:
                                n > m
                  ---------------------------------                 (S_RcdWidth)
                  {i1:T1...in:Tn} <: {i1:T1...im:Tm} 
    We can use [S_RcdWidth] to drop later fields of a multi-field
    record while keeping earlier fields, showing for example that
-   [{age:Nat,name:String} <: {name:String,age:Nat}].
+   [{age:Nat,name:String} <: {name:String}]. *)
 
-   Second, we can apply subtyping inside the components of a compound
+(** Second, we can apply subtyping inside the components of a compound
    record type:
                        S1 <: T1  ...  Sn <: Tn
                   ----------------------------------               (S_RcdDepth)
                   {i1:S1...in:Sn} <: {i1:T1...in:Tn}
    For example, we can use [S_RcdDepth] and [S_RcdWidth] together to
-   show that [{y:Student, x:Nat} <: {y:Person}].
+   show that [{y:Student, x:Nat} <: {y:Person}]. *)
 
-   Third, we need to be able to reorder fields.  For example, we
+(** Third, we need to be able to reorder fields.  For example, we
    might expect that [{name:String, gpa:Nat, age:Nat} <: Person].  We
    haven't quite achieved this yet: using just [S_RcdDepth] and
    [S_RcdWidth] we can only drop fields from the _end_ of a record
@@ -386,8 +396,11 @@ Require Export MoreStlc.
                   {i1:S1...in:Sn} <: {i1:T1...in:Tn}
 *)
 
+
+
 (* ############################################### *)
 (** ** Exercises *)
+
 
 (** **** Exercise: 1 star, optional (subtype_instances_tf_1) *)
 (** Suppose we have types [S], [T], [U], and [V] with [S <: T]
@@ -656,9 +669,9 @@ Tactic Notation "t_cases" tactic(first) ident(c) :=
 Fixpoint subst (x:id) (s:tm)  (t:tm) : tm :=
   match t with
   | tvar y => 
-      if beq_id x y then s else t
+      if eq_id_dec x y then s else t
   | tabs y T t1 => 
-      tabs y T (if beq_id x y then t1 else (subst x s t1))
+      tabs y T (if eq_id_dec x y then t1 else (subst x s t1))
   | tapp t1 t2 => 
       tapp (subst x s t1) (subst x s t2)
   | ttrue => 
@@ -682,9 +695,9 @@ Notation "'[' x ':=' s ']' t" := (subst x s t) (at level 20).
 Inductive value : tm -> Prop :=
   | v_abs : forall x T t,
       value (tabs x T t)
-  | t_true : 
+  | v_true : 
       value ttrue
-  | t_false : 
+  | v_false : 
       value tfalse
   | v_unit : 
       value tunit
@@ -733,20 +746,22 @@ Hint Constructors step.
 (** The definition of subtyping is just what we sketched in the
     motivating discussion. *)
 
+Reserved Notation "T '<:' U" (at level 40).
+
 Inductive subtype : ty -> ty -> Prop :=
   | S_Refl : forall T,
-    subtype T T
+    T <: T
   | S_Trans : forall S U T,
-    subtype S U ->
-    subtype U T ->
-    subtype S T
+    S <: U ->
+    U <: T ->
+    S <: T
   | S_Top : forall S,
-    subtype S TTop
+    S <: TTop
   | S_Arrow : forall S1 S2 T1 T2,
-    subtype T1 S1 ->
-    subtype S2 T2 ->
-    subtype (TArrow S1 S2) (TArrow T1 T2)
-.
+    T1 <: S1 ->
+    S2 <: T2 ->
+    (TArrow S1 S2) <: (TArrow T1 T2)
+where "T '<:' U" := (subtype T U).
 
 (** Note that we don't need any special rules for base types: they are
     automatically subtypes of themselves (by [S_Refl]) and [Top] (by
@@ -796,19 +811,18 @@ Definition Employee : ty :=
 (* FILL IN HERE *) admit.
 
 Example sub_student_person :
-  subtype Student Person.
+  Student <: Person.
 Proof. 
 (* FILL IN HERE *) Admitted.
 
 Example sub_employee_person :
-  subtype Employee Person.
+  Employee <: Person.
 Proof. 
 (* FILL IN HERE *) Admitted.
 (** [] *)
 
 Example subtyping_example_0 :
-  subtype (TArrow C Person) 
-          (TArrow C TTop).
+  (TArrow C Person) <: (TArrow C TTop).
 (* C->Person <: C->Top *)
 Proof.
   apply S_Arrow.
@@ -821,8 +835,7 @@ Qed.
 
 (** **** Exercise: 1 star, optional (subtyping_example_1) *)
 Example subtyping_example_1 :
-  subtype (TArrow TTop Student) 
-          (TArrow (TArrow C C) Person).
+  (TArrow TTop Student) <: (TArrow (TArrow C C) Person).
 (* Top->Student <: (C->C)->Person *)
 Proof with eauto.
   (* FILL IN HERE *) Admitted.
@@ -830,8 +843,7 @@ Proof with eauto.
 
 (** **** Exercise: 1 star, optional (subtyping_example_2) *)
 Example subtyping_example_2 :
-  subtype (TArrow TTop Person) 
-          (TArrow Person TTop).
+  (TArrow TTop Person) <: (TArrow Person TTop).
 (* Top->Person <: Person->Top *)
 Proof with eauto.
   (* FILL IN HERE *) Admitted.
@@ -849,36 +861,40 @@ End Examples.
 Definition context := id -> (option ty).
 Definition empty : context := (fun _ => None). 
 Definition extend (Gamma : context) (x:id) (T : ty) :=
-  fun x' => if beq_id x x' then Some T else Gamma x'.
+  fun x' => if eq_id_dec x x' then Some T else Gamma x'.
+
+Reserved Notation "Gamma '|-' t '\in' T" (at level 40).
 
 Inductive has_type : context -> tm -> ty -> Prop :=
   (* Same as before *)
   | T_Var : forall Gamma x T,
       Gamma x = Some T ->
-      has_type Gamma (tvar x) T
+      Gamma |- (tvar x) \in T
   | T_Abs : forall Gamma x T11 T12 t12,
-      has_type (extend Gamma x T11) t12 T12 -> 
-      has_type Gamma (tabs x T11 t12) (TArrow T11 T12)
+      (extend Gamma x T11) |- t12 \in T12 -> 
+      Gamma |- (tabs x T11 t12) \in (TArrow T11 T12)
   | T_App : forall T1 T2 Gamma t1 t2,
-      has_type Gamma t1 (TArrow T1 T2) -> 
-      has_type Gamma t2 T1 -> 
-      has_type Gamma (tapp t1 t2) T2
+      Gamma |- t1 \in (TArrow T1 T2) -> 
+      Gamma |- t2 \in T1 -> 
+      Gamma |- (tapp t1 t2) \in T2
   | T_True : forall Gamma,
-       has_type Gamma ttrue TBool
+       Gamma |- ttrue \in TBool
   | T_False : forall Gamma,
-       has_type Gamma tfalse TBool
+       Gamma |- tfalse \in TBool
   | T_If : forall t1 t2 t3 T Gamma,
-       has_type Gamma t1 TBool ->
-       has_type Gamma t2 T ->
-       has_type Gamma t3 T ->
-       has_type Gamma (tif t1 t2 t3) T
+       Gamma |- t1 \in TBool ->
+       Gamma |- t2 \in T ->
+       Gamma |- t3 \in T ->
+       Gamma |- (tif t1 t2 t3) \in T
   | T_Unit : forall Gamma,
-      has_type Gamma tunit TUnit
+      Gamma |- tunit \in TUnit
   (* New rule of subsumption *)
   | T_Sub : forall Gamma t S T,
-      has_type Gamma t S ->
-      subtype S T ->
-      has_type Gamma t T.
+      Gamma |- t \in S ->
+      S <: T ->
+      Gamma |- t \in T
+
+where "Gamma '|-' t '\in' T" := (has_type Gamma t T).
 
 Hint Constructors has_type.
 
@@ -949,7 +965,7 @@ End Examples2.
 
 (** **** Exercise: 2 stars, optional (sub_inversion_Bool) *)
 Lemma sub_inversion_Bool : forall U,
-     subtype U TBool ->
+     U <: TBool ->
        U = TBool.
 Proof with auto.
   intros U Hs.
@@ -958,9 +974,9 @@ Proof with auto.
 
 (** **** Exercise: 3 stars, optional (sub_inversion_arrow) *)
 Lemma sub_inversion_arrow : forall U V1 V2,
-     subtype U (TArrow V1 V2) ->
+     U <: (TArrow V1 V2) ->
      exists U1, exists U2, 
-       U = (TArrow U1 U2) /\ (subtype V1 U1) /\ (subtype U2 V2).
+       U = (TArrow U1 U2) /\ (V1 <: U1) /\ (U2 <: V2).
 Proof with eauto.
   intros U V1 V2 Hs.
   remember (TArrow V1 V2) as V.
@@ -998,7 +1014,7 @@ Proof with eauto.
 
 (** **** Exercise: 3 stars, optional (canonical_forms_of_arrow_types) *)
 Lemma canonical_forms_of_arrow_types : forall Gamma s T1 T2,
-  has_type Gamma s (TArrow T1 T2) ->
+  Gamma |- s \in (TArrow T1 T2) ->
   value s ->
   exists x, exists S1, exists s2,
      s = tabs x S1 s2.
@@ -1010,7 +1026,7 @@ Proof with eauto.
     [true] and [false]. *)
 
 Lemma canonical_forms_of_Bool : forall Gamma s,
-  has_type Gamma s TBool ->
+  Gamma |- s \in TBool ->
   value s ->
   (s = ttrue \/ s = tfalse).
 Proof with eauto.
@@ -1080,7 +1096,7 @@ Qed.
 *)
 
 Theorem progress : forall t T, 
-     has_type empty t T ->
+     empty |- t \in T ->
      value t \/ exists t', t ==> t'. 
 Proof with eauto.
   intros t T Ht.
@@ -1155,9 +1171,9 @@ Qed.
        <: T] then follows by [S_Trans]. *)
 
 Lemma typing_inversion_abs : forall Gamma x S1 t2 T,
-     has_type Gamma (tabs x S1 t2) T ->
-     (exists S2, subtype (TArrow S1 S2) T
-              /\ has_type (extend Gamma x S1) t2 S2).
+     Gamma |- (tabs x S1 t2) \in T ->
+     (exists S2, (TArrow S1 S2) <: T
+              /\ (extend Gamma x S1) |- t2 \in S2).
 Proof with eauto.
   intros Gamma x S1 t2 T H.
   remember (tabs x S1 t2) as t.
@@ -1172,9 +1188,9 @@ Proof with eauto.
 (** Similarly... *)
 
 Lemma typing_inversion_var : forall Gamma x T,
-  has_type Gamma (tvar x) T ->
+  Gamma |- (tvar x) \in T ->
   exists S,
-    Gamma x = Some S /\ subtype S T.
+    Gamma x = Some S /\ S <: T.
 Proof with eauto.
   intros Gamma x T Hty.
   remember (tvar x) as t.
@@ -1186,10 +1202,10 @@ Proof with eauto.
     destruct IHHty as [U [Hctx HsubU]]... Qed.
 
 Lemma typing_inversion_app : forall Gamma t1 t2 T2,
-  has_type Gamma (tapp t1 t2) T2 ->
+  Gamma |- (tapp t1 t2) \in T2 ->
   exists T1,
-    has_type Gamma t1 (TArrow T1 T2) /\
-    has_type Gamma t2 T1.
+    Gamma |- t1 \in (TArrow T1 T2) /\
+    Gamma |- t2 \in T1.
 Proof with eauto.
   intros Gamma t1 t2 T2 Hty.
   remember (tapp t1 t2) as t.
@@ -1202,8 +1218,8 @@ Proof with eauto.
 Qed.
 
 Lemma typing_inversion_true : forall Gamma T,
-  has_type Gamma ttrue T ->
-  subtype TBool T.
+  Gamma |- ttrue \in T ->
+  TBool <: T.
 Proof with eauto.
   intros Gamma T Htyp. remember ttrue as tu.
   has_type_cases (induction Htyp) Case;
@@ -1211,8 +1227,8 @@ Proof with eauto.
 Qed.
 
 Lemma typing_inversion_false : forall Gamma T,
-  has_type Gamma tfalse T ->
-  subtype TBool T.
+  Gamma |- tfalse \in T ->
+  TBool <: T.
 Proof with eauto.
   intros Gamma T Htyp. remember tfalse as tu.
   has_type_cases (induction Htyp) Case;
@@ -1220,10 +1236,10 @@ Proof with eauto.
 Qed.
 
 Lemma typing_inversion_if : forall Gamma t1 t2 t3 T,
-  has_type Gamma (tif t1 t2 t3) T ->
-  has_type Gamma t1 TBool 
-  /\ has_type Gamma t2 T
-  /\ has_type Gamma t3 T.
+  Gamma |- (tif t1 t2 t3) \in T ->
+  Gamma |- t1 \in TBool 
+  /\ Gamma |- t2 \in T
+  /\ Gamma |- t3 \in T.
 Proof with eauto.
   intros Gamma t1 t2 t3 T Hty.
   remember (tif t1 t2 t3) as t.
@@ -1236,8 +1252,8 @@ Proof with eauto.
 Qed.
 
 Lemma typing_inversion_unit : forall Gamma T,
-  has_type Gamma tunit T ->
-    subtype TUnit T.
+  Gamma |- tunit \in T ->
+    TUnit <: T.
 Proof with eauto.
   intros Gamma T Htyp. remember tunit as tu.
   has_type_cases (induction Htyp) Case;
@@ -1250,9 +1266,9 @@ Qed.
     us exactly what we'll actually require below. *)
 
 Lemma abs_arrow : forall x S1 s2 T1 T2, 
-  has_type empty (tabs x S1 s2) (TArrow T1 T2) ->
-     subtype T1 S1 
-  /\ has_type (extend empty x S1) s2 T2.
+  empty |- (tabs x S1 s2) \in (TArrow T1 T2) ->
+     T1 <: S1 
+  /\ (extend empty x S1) |- s2 \in T2.
 Proof with eauto.
   intros x S1 s2 T1 T2 Hty.
   apply typing_inversion_abs in Hty.
@@ -1292,9 +1308,9 @@ Inductive appears_free_in : id -> tm -> Prop :=
 Hint Constructors appears_free_in.
 
 Lemma context_invariance : forall Gamma Gamma' t S,
-     has_type Gamma t S  ->
+     Gamma |- t \in S  ->
      (forall x, appears_free_in x t -> Gamma x = Gamma' x)  ->
-     has_type Gamma' t S.
+     Gamma' |- t \in S.
 Proof with eauto.
   intros. generalize dependent Gamma'.
   has_type_cases (induction H) Case; 
@@ -1303,8 +1319,8 @@ Proof with eauto.
     apply T_Var... rewrite <- Heqv...
   Case "T_Abs".
     apply T_Abs... apply IHhas_type. intros x0 Hafi.
-    unfold extend. remember (beq_id x x0) as e.
-    destruct e...
+    unfold extend. destruct (eq_id_dec x x0)...
+
   Case "T_App".
     apply T_App with T1...
   Case "T_If".
@@ -1314,7 +1330,7 @@ Qed.
 
 Lemma free_in_context : forall x t T Gamma,
    appears_free_in x t ->
-   has_type Gamma t T ->
+   Gamma |- t \in T ->
    exists T', Gamma x = Some T'.
 Proof with eauto.
   intros x t T Gamma Hafi Htyp.
@@ -1322,8 +1338,7 @@ Proof with eauto.
       subst; inversion Hafi; subst...
   Case "T_Abs".
     destruct (IHHtyp H4) as [T Hctx]. exists T.
-    unfold extend in Hctx. apply not_eq_beq_id_false in H2. 
-    rewrite H2 in Hctx...  Qed.
+    unfold extend in Hctx. rewrite neq_id in Hctx...  Qed.
 
 (* ########################################## *)
 (** ** Substitution *)
@@ -1336,9 +1351,9 @@ Proof with eauto.
     well-typedness of subterms. *)
 
 Lemma substitution_preserves_typing : forall Gamma x U v t S,
-     has_type (extend Gamma x U) t S  ->
-     has_type empty v U   ->
-     has_type Gamma ([x:=v]t) S.
+     (extend Gamma x U) |- t \in S  ->
+     empty |- v \in U   ->
+     Gamma |- ([x:=v]t) \in S.
 Proof with eauto.
   intros Gamma x U v t S Htypt Htypv.
   generalize dependent S. generalize dependent Gamma.
@@ -1348,9 +1363,9 @@ Proof with eauto.
     destruct (typing_inversion_var _ _ _ Htypt) 
         as [T [Hctx Hsub]].
     unfold extend in Hctx.
-    remember (beq_id x y) as e. destruct e...
+    destruct (eq_id_dec x y)...
     SCase "x=y".
-      apply beq_id_eq in Heqe. subst.
+      subst.
       inversion Hctx; subst. clear Hctx.
       apply context_invariance with empty...
       intros x Hcontra.
@@ -1366,34 +1381,33 @@ Proof with eauto.
     destruct (typing_inversion_abs _ _ _ _ _ Htypt) 
       as [T2 [Hsub Htypt2]].
     apply T_Sub with (TArrow T1 T2)... apply T_Abs...
-    remember (beq_id x y) as e. destruct e.
+    destruct (eq_id_dec x y).
     SCase "x=y".
       eapply context_invariance...
-      apply beq_id_eq in Heqe. subst.
+      subst.
       intros x Hafi. unfold extend.
-      destruct (beq_id y x)...
+      destruct (eq_id_dec y x)...
     SCase "x<>y".
       apply IHt. eapply context_invariance...
       intros z Hafi. unfold extend.
-      remember (beq_id y z) as e0. destruct e0...
-      apply beq_id_eq in Heqe0. subst.
-      rewrite <- Heqe...
+      destruct (eq_id_dec y z)...
+      subst. rewrite neq_id... 
   Case "ttrue".
-      assert (subtype TBool S) 
+      assert (TBool <: S) 
         by apply (typing_inversion_true _ _  Htypt)...
   Case "tfalse".
-      assert (subtype TBool S) 
+      assert (TBool <: S) 
         by apply (typing_inversion_false _ _  Htypt)...
   Case "tif".
-    assert (has_type (extend Gamma x U) t1 TBool 
-            /\ has_type (extend Gamma x U) t2 S
-            /\ has_type (extend Gamma x U) t3 S) 
+    assert ((extend Gamma x U) |- t1 \in TBool 
+            /\ (extend Gamma x U) |- t2 \in S
+            /\ (extend Gamma x U) |- t3 \in S) 
       by apply (typing_inversion_if _ _ _ _ _ Htypt).
     inversion H as [H1 [H2 H3]].
     apply IHt1 in H1. apply IHt2 in H2. apply IHt3 in H3.
     auto.
   Case "tunit".
-    assert (subtype TUnit S) 
+    assert (TUnit <: S) 
       by apply (typing_inversion_unit _ _  Htypt)...
 Qed.
 
@@ -1456,9 +1470,9 @@ Qed.
        subderivation and an application of [T_Sub].  [] *)
 
 Theorem preservation : forall t t' T,
-     has_type empty t T  ->
+     empty |- t \in T  ->
      t ==> t'  ->
-     has_type empty t' T.
+     empty |- t' \in T.
 Proof with eauto.
   intros t t' T HT.
   remember empty as Gamma. generalize dependent HeqGamma.
@@ -1575,4 +1589,6 @@ Qed.
       need to add some completely new lemmas.)  []
 *)
 
+
+(* $Date: 2013-07-18 09:59:22 -0400 (Thu, 18 Jul 2013) $ *)
 

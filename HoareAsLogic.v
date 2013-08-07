@@ -1,6 +1,6 @@
 (** * HoareAsLogic: Hoare Logic as a Logic *)
 
-(* $Date: 2011-04-16 14:56:54 -0400 (Sat, 16 Apr 2011) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 
 Require Export Hoare.
 
@@ -24,7 +24,7 @@ Inductive hoare_proof : Assertion -> com -> Assertion -> Type :=
   | H_Asgn : forall Q V a, 
       hoare_proof (assn_sub V a Q) (V ::= a) Q
   | H_Seq  : forall P c Q d R, 
-      hoare_proof P c Q -> hoare_proof Q d R -> hoare_proof P (c;d) R
+      hoare_proof P c Q -> hoare_proof Q d R -> hoare_proof P (c;;d) R
   | H_If : forall P Q b c1 c2,
     hoare_proof (fun st => P st /\ bassn b st) c1 Q ->
     hoare_proof (fun st => P st /\ ~(bassn b st)) c2 Q ->
@@ -36,25 +36,35 @@ Inductive hoare_proof : Assertion -> com -> Assertion -> Type :=
     hoare_proof P' c Q' ->
     (forall st, P st -> P' st) ->
     (forall st, Q' st -> Q st) ->
-    hoare_proof P c Q
-  | H_Consequence_pre  : forall (P Q P' : Assertion) c, 
-    hoare_proof P' c Q ->
-    (forall st, P st -> P' st) ->
-    hoare_proof P c Q
-  | H_Consequence_post  : forall (P Q Q' : Assertion) c, 
-    hoare_proof P c Q' ->
-    (forall st, Q' st -> Q st) ->
     hoare_proof P c Q.
 
 Tactic Notation "hoare_proof_cases" tactic(first) ident(c) :=
   first;
   [ Case_aux c "H_Skip" | Case_aux c "H_Asgn" | Case_aux c "H_Seq"
-  | Case_aux c "H_If" | Case_aux c "H_While" | Case_aux c "H_Consequence"
-  | Case_aux c "H_Consequence_pre" | Case_aux c "H_Consequence_post" ].
+  | Case_aux c "H_If" | Case_aux c "H_While" | Case_aux c "H_Consequence" ].
 
-(** For example, let's construct a proof object representing a
+(** We don't need to include axioms corresponding to [hoare_consequence_pre]
+    or [hoare_consequence_post], because these can be proven easily
+    from [H_Consequence]. *)
+
+Lemma H_Consequence_pre : forall (P Q P': Assertion) c,
+    hoare_proof P' c Q ->
+    (forall st, P st -> P' st) ->
+    hoare_proof P c Q.
+Proof.
+  (* FILL IN HERE *) Admitted.
+
+Lemma H_Consequence_post  : forall (P Q Q' : Assertion) c, 
+    hoare_proof P c Q' ->
+    (forall st, Q' st -> Q st) ->
+    hoare_proof P c Q.
+Proof.
+  (* FILL IN HERE *) Admitted.
+
+
+(** Now, for example, let's construct a proof object representing a
     derivation for the hoare triple
-      {{assn_sub X (X+1) (assn_sub X (X+2) (X=3))}} X::=X+1; X::=X+2 {{X=3}}.
+      {{assn_sub X (X+1) (assn_sub X (X+2) (X=3))}} X::=X+1;; X::=X+2 {{X=3}}.
     We can use Coq's tactics to help us construct the proof object. *)
 
 Example sample_proof
@@ -62,13 +72,12 @@ Example sample_proof
                  (assn_sub X (APlus (AId X) (ANum 1))
                    (assn_sub X (APlus (AId X) (ANum 2))
                      (fun st => st X = 3) ))
-                 (X ::= APlus (AId X) (ANum 1); (X ::= APlus (AId X) (ANum 2)))
+                 (X ::= APlus (AId X) (ANum 1);; (X ::= APlus (AId X) (ANum 2)))
                  (fun st => st X = 3).
 Proof.
-  apply H_Seq with (assn_sub X (APlus (AId X) (ANum 2))
-                     (fun st => st X = 3)).
-  apply H_Asgn. apply H_Asgn. 
+  eapply H_Seq; apply H_Asgn.
 Qed.
+
 
 (* 
 Print sample_proof.
@@ -85,7 +94,7 @@ Print sample_proof.
     (H_Asgn (fun st : state => st X = VNat 3) X (APlus (AId X) (ANum 2)))
 *)
 
-(** **** Exercise: 2 stars *)
+(** **** Exercise: 2 stars (hoare_proof_sound) *)
 (** Prove that such proof objects represent true claims. *)
 
 Theorem hoare_proof_sound : forall P c Q,
@@ -112,15 +121,16 @@ Proof.
   intro c.
   com_cases (induction c) Case; intro P.
   Case "SKIP".
-    eapply H_Consequence_pre.
+    eapply H_Consequence.
     apply H_Skip.
+    intros. apply H. 
     (* Proof of True *)
     intros. apply I.
   Case "::=".
     eapply H_Consequence_pre.
     apply H_Asgn.
-    intros. apply I.
-  Case ";".
+    intros. apply I. 
+  Case ";;".
     eapply H_Consequence_pre.
     eapply H_Seq.
     apply (IHc1 (fun _ => True)).
@@ -161,7 +171,7 @@ Proof.
   com_cases (induction c) Case; intro Q.
   Case "SKIP". pre_false_helper H_Skip.
   Case "::=". pre_false_helper H_Asgn.
-  Case ";". pre_false_helper H_Seq. apply IHc1. apply IHc2.
+  Case ";;". pre_false_helper H_Seq. apply IHc1. apply IHc2.
   Case "IFB".
     apply H_If; eapply H_Consequence_pre.
     apply IHc1. intro. eapply False_and_P_imp.
@@ -175,9 +185,94 @@ Proof.
     intro. simpl. eapply False_and_P_imp.
 Qed.
 
-(** This style of presentation gives a clearer picture of what it
+(** As a last step, we can show that the set of [hoare_proof] axioms is 
+    sufficient to prove any true fact about (partial) correctness. 
+    More precisely, any semantic Hoare triple that we can prove can 
+    also be proved from these axioms.  Such a set of axioms is said 
+    to be _relatively complete_. *)
+
+(** This proof is inspired by the one at 
+http://www.ps.uni-saarland.de/courses/sem-ws11/script/Hoare.html
+*)
+
+(** To prove this fact, we'll need to invent some intermediate
+    assertions using a technical device known as _weakest preconditions_.
+    Given a command [c] and a desired postcondition assertion [Q], 
+    the weakest precondition [wp c Q] is an assertion [P] such that
+    [{{P}} c {{Q}}] holds, and moreover, for any other assertion [P'],
+    if [{{P'}} c {{Q}}] holds then [P' -> P].  We can more directly 
+    define this as follows: *)
+    
+Definition wp (c:com) (Q:Assertion) : Assertion := 
+  fun s => forall s', c / s || s' -> Q s'.
+
+(** **** Exercise: 1 star (wp_is_precondition) *)
+
+Lemma wp_is_precondition: forall c Q, 
+  {{wp c Q}} c {{Q}}. 
+(* FILL IN HERE *) Admitted.
+
+(** **** Exercise: 1 star (wp_is_weakest) *)
+
+Lemma wp_is_weakest: forall c Q P', 
+   {{P'}} c {{Q}} -> forall st, P' st -> wp c Q st. 
+(* FILL IN HERE *) Admitted.
+
+(** The following utility lemma will also be useful. *)
+
+Lemma bassn_eval_false : forall b st, ~ bassn b st -> beval st b = false.
+Proof.
+  intros b st H. unfold bassn in H. destruct (beval st b). 
+    exfalso. apply H. reflexivity.
+    reflexivity.
+Qed.
+
+(** **** Exercise: 4 stars (hoare_proof_complete) *)
+(** Complete the proof of the theorem. *)
+
+Theorem hoare_proof_complete: forall P c Q,
+  {{P}} c {{Q}} -> hoare_proof P c Q.
+Proof.
+  intros P c. generalize dependent P. 
+  com_cases (induction c) Case; intros P Q HT. 
+  Case "SKIP". 
+    eapply H_Consequence.
+     eapply H_Skip.
+      intros.  eassumption. 
+      intro st. apply HT.  apply E_Skip. 
+  Case "::=". 
+    eapply H_Consequence.
+      eapply H_Asgn. 
+      intro st. apply HT. econstructor. reflexivity.
+      intros; assumption.
+  Case ";;". 
+    apply H_Seq with (wp c2 Q). 
+     eapply IHc1. 
+       intros st st' E1 H. unfold wp. intros st'' E2.  
+         eapply HT. econstructor; eassumption. assumption.
+     eapply IHc2. intros st st' E1 H. apply H; assumption.  
+  (* FILL IN HERE *) Admitted.
+
+(** Finally, we might hope that our axiomatic Hoare logic is _decidable_; 
+    that is, that there is an (terminating) algorithm (a _decision procedure_)
+    that can determine  whether or not a given Hoare triple is valid (derivable).
+    But such a decision procedure cannot exist!
+
+    Consider the triple [{{True}} c {{False}}]. This triple is valid 
+    if and only if [c] is non-terminating.  So any algorithm that could
+    determine validity of arbitrary triples could solve the Halting Problem.
+
+    Similarly, the triple [{{True} SKIP {{P}}] is valid if and only if 
+    [forall s, P s] is valid, where [P] is an arbitrary assertion of Coq's 
+    logic. But it is known that there can be no decision procedure for 
+    this logic. 
+
+*)
+    
+(** Overall, this axiomatic style of presentation gives a clearer picture of what it
     means to "give a proof in Hoare logic."  However, it is not
     entirely satisfactory from the point of view of writing down such
     proofs in practice: it is quite verbose.  The section of chapter
-    [Hoare] on formalizing decorated programs shows how we can do even
+    [Hoare2] on formalizing decorated programs shows how we can do even
     better. *)
+

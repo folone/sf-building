@@ -1,6 +1,6 @@
 (** * References: Typing Mutable References *)
 
-(* $Date: 2012-04-23 13:24:50 -0400 (Mon, 23 Apr 2012) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 
 Require Export Smallstep.
 
@@ -100,12 +100,10 @@ Module STLCRef.
     assignment operation.  We then add _reference types_. *)
 (** If [T] is a type, then [Ref T] is the type of references which
     point to a cell holding values of type [T].  
-<<
       T ::= Nat
           | Unit
           | T -> T
           | Ref T
->>
 *)
 
 Inductive ty : Type :=
@@ -230,11 +228,11 @@ Hint Constructors value.
 Fixpoint subst (x:id) (s:tm) (t:tm) : tm :=
   match t with
   | tvar x'       => 
-      if beq_id x x' then s else t
+      if eq_id_dec x x' then s else t
   | tapp t1 t2    => 
       tapp (subst x s t1) (subst x s t2)
   | tabs x' T t1  => 
-      if beq_id x x' then t else tabs x' T (subst x s t1)
+      if eq_id_dec x x' then t else tabs x' T (subst x s t1)
   | tnat n        => 
       t
   | tsucc t1      => 
@@ -1045,49 +1043,53 @@ Definition store_Tlookup (n:nat) (ST:store_ty) :=
                     Gamma; ST |- t1 := t2 : Unit
 *)
 
+Reserved Notation "Gamma ';' ST '|-' t '\in' T" (at level 40).
+
 Inductive has_type : context -> store_ty -> tm -> ty -> Prop :=
   | T_Var : forall Gamma ST x T,
       Gamma x = Some T ->
-      has_type Gamma ST (tvar x) T
+      Gamma; ST |- (tvar x) \in T
   | T_Abs : forall Gamma ST x T11 T12 t12,
-      has_type (extend Gamma x T11) ST t12 T12 ->
-      has_type Gamma ST (tabs x T11 t12) (TArrow T11 T12)
+      (extend Gamma x T11); ST |- t12 \in T12 ->
+      Gamma; ST |- (tabs x T11 t12) \in (TArrow T11 T12)
   | T_App : forall T1 T2 Gamma ST t1 t2,
-      has_type Gamma ST t1 (TArrow T1 T2) -> 
-      has_type Gamma ST t2 T1 -> 
-      has_type Gamma ST (tapp t1 t2) T2
+      Gamma; ST |- t1 \in (TArrow T1 T2) -> 
+      Gamma; ST |- t2 \in T1 -> 
+      Gamma; ST |- (tapp t1 t2) \in T2
   | T_Nat : forall Gamma ST n,
-      has_type Gamma ST (tnat n) TNat
+      Gamma; ST |- (tnat n) \in TNat
   | T_Succ : forall Gamma ST t1,
-      has_type Gamma ST t1 TNat ->
-      has_type Gamma ST (tsucc t1) TNat
+      Gamma; ST |- t1 \in TNat ->
+      Gamma; ST |- (tsucc t1) \in TNat
   | T_Pred : forall Gamma ST t1,
-      has_type Gamma ST t1 TNat ->
-      has_type Gamma ST (tpred t1) TNat
+      Gamma; ST |- t1 \in TNat ->
+      Gamma; ST |- (tpred t1) \in TNat
   | T_Mult : forall Gamma ST t1 t2,
-      has_type Gamma ST t1 TNat ->
-      has_type Gamma ST t2 TNat ->
-      has_type Gamma ST (tmult t1 t2) TNat
+      Gamma; ST |- t1 \in TNat ->
+      Gamma; ST |- t2 \in TNat ->
+      Gamma; ST |- (tmult t1 t2) \in TNat
   | T_If0 : forall Gamma ST t1 t2 t3 T,
-      has_type Gamma ST t1 TNat ->
-      has_type Gamma ST t2 T ->
-      has_type Gamma ST t3 T ->
-      has_type Gamma ST (tif0 t1 t2 t3) T
+      Gamma; ST |- t1 \in TNat ->
+      Gamma; ST |- t2 \in T ->
+      Gamma; ST |- t3 \in T ->
+      Gamma; ST |- (tif0 t1 t2 t3) \in T
   | T_Unit : forall Gamma ST,
-      has_type Gamma ST tunit TUnit
+      Gamma; ST |- tunit \in TUnit
   | T_Loc : forall Gamma ST l,
       l < length ST ->
-      has_type Gamma ST (tloc l) (TRef (store_Tlookup l ST))
+      Gamma; ST |- (tloc l) \in (TRef (store_Tlookup l ST))
   | T_Ref : forall Gamma ST t1 T1,
-      has_type Gamma ST t1 T1 ->
-      has_type Gamma ST (tref t1) (TRef T1)
+      Gamma; ST |- t1 \in T1 ->
+      Gamma; ST |- (tref t1) \in (TRef T1)
   | T_Deref : forall Gamma ST t1 T11,
-      has_type Gamma ST t1 (TRef T11) ->
-      has_type Gamma ST (tderef t1) T11
+      Gamma; ST |- t1 \in (TRef T11) ->
+      Gamma; ST |- (tderef t1) \in T11
   | T_Assign : forall Gamma ST t1 t2 T11,
-      has_type Gamma ST t1 (TRef T11) ->
-      has_type Gamma ST t2 T11 ->
-      has_type Gamma ST (tassign t1 t2) TUnit.
+      Gamma; ST |- t1 \in (TRef T11) ->
+      Gamma; ST |- t2 \in T11 ->
+      Gamma; ST |- (tassign t1 t2) \in TUnit
+
+where "Gamma ';' ST '|-' t '\in' T" := (has_type Gamma ST t T).
 
 Hint Constructors has_type.
 
@@ -1146,10 +1148,10 @@ Tactic Notation "has_type_cases" tactic(first) ident(c) :=
     typings without saying anything about how they are related: *)
 
 Theorem preservation_wrong1 : forall ST T t st t' st',
-  has_type empty ST t T ->
+  empty; ST |- t \in T ->
   t / st ==> t' / st' ->
-  has_type empty ST t' T.
-Admitted.
+  empty; ST |- t' \in T.
+Abort.
 
 (** If we typecheck with respect to some set of assumptions about the
     types of the values in the store and then evaluate with respect to
@@ -1164,7 +1166,7 @@ Admitted.
 Definition store_well_typed (ST:store_ty) (st:store) :=
   length ST = length st /\
   (forall l, l < length st -> 
-     has_type empty ST (store_lookup l st) (store_Tlookup l ST)).
+     empty; ST |- (store_lookup l st) \in (store_Tlookup l ST)).
 
 (** Informally, we will write [ST |- st] for [store_well_typed ST st]. *)
 
@@ -1187,11 +1189,11 @@ Definition store_well_typed (ST:store_ty) (st:store) :=
     property: *)
 
 Theorem preservation_wrong2 : forall ST T t st t' st', 
-  has_type empty ST t T ->
+  empty; ST |- t \in T ->
   t / st ==> t' / st' ->
   store_well_typed ST st ->
-  has_type empty ST t' T.
-Admitted.
+  empty; ST |- t' \in T.
+Abort.
 
 (** This statement is fine for all of the evaluation rules except the
     allocation rule [ST_RefValue].  The problem is that this rule
@@ -1281,12 +1283,12 @@ Qed.
     preservation property: *)
 
 Definition preservation_theorem := forall ST t t' T st st',
-  has_type empty ST t T ->
+  empty; ST |- t \in T ->
   store_well_typed ST st ->
   t / st ==> t' / st' ->
   exists ST',
     (extends ST' ST /\ 
-     has_type empty ST' t' T /\
+     empty; ST' |- t' \in T /\
      store_well_typed ST' st').
 
 (** Note that the preservation theorem merely asserts that there is
@@ -1369,7 +1371,7 @@ Hint Constructors appears_free_in.
 
 Lemma free_in_context : forall x t T Gamma ST,
    appears_free_in x t ->
-   has_type Gamma ST t T ->
+   Gamma; ST |- t \in T ->
    exists T', Gamma x = Some T'.
 Proof with eauto.
   intros. generalize dependent Gamma. generalize dependent T.
@@ -1378,14 +1380,13 @@ Proof with eauto.
   Case "afi_abs".
     inversion H1; subst.
     apply IHappears_free_in in H8. 
-    apply not_eq_beq_id_false in H.
     rewrite extend_neq in H8; assumption.
 Qed.
 
 Lemma context_invariance : forall Gamma Gamma' ST t T,
-  has_type Gamma ST t T ->
+  Gamma; ST |- t \in T ->
   (forall x, appears_free_in x t -> Gamma x = Gamma' x) ->
-  has_type Gamma' ST t T.
+  Gamma'; ST |- t \in T.
 Proof with eauto.
   intros.
   generalize dependent Gamma'.
@@ -1395,8 +1396,7 @@ Proof with eauto.
   Case "T_Abs".
     apply T_Abs. apply IHhas_type; intros.
     unfold extend.
-    remember (beq_id x x0) as e; destruct e...
-    apply H0. apply afi_abs. apply beq_id_false_not_eq... auto.
+    destruct (eq_id_dec x x0)...
   Case "T_App".
     eapply T_App. 
       apply IHhas_type1...
@@ -1417,9 +1417,9 @@ Proof with eauto.
 Qed.
 
 Lemma substitution_preserves_typing : forall Gamma ST x s S t T,
-  has_type empty ST s S ->
-  has_type (extend Gamma x S) ST t T ->
-  has_type Gamma ST ([x:=s]t) T.
+  empty; ST |- s \in S ->
+  (extend Gamma x S); ST |- t \in T ->
+  Gamma; ST |- ([x:=s]t) \in T.
 Proof with eauto.
   intros Gamma ST x s S t T Hs Ht.
   generalize dependent Gamma. generalize dependent T.
@@ -1427,9 +1427,9 @@ Proof with eauto.
     inversion H; subst; simpl...
   Case "tvar". 
     rename i into y.
-    remember (beq_id x y) as eq; destruct eq; subst.
+    destruct (eq_id_dec x y).
     SCase "x = y".
-      apply beq_id_eq in Heqeq; subst.
+      subst. 
       rewrite extend_eq in H3.
       inversion H3; subst. 
       eapply context_invariance...
@@ -1441,18 +1441,18 @@ Proof with eauto.
       rewrite extend_neq in H3...
   Case "tabs". subst. 
     rename i into y.
-    remember (beq_id x y) as eq; destruct eq.
+    destruct (eq_id_dec x y).
     SCase "x = y".
-      apply beq_id_eq in Heqeq; subst.
+      subst. 
       apply T_Abs. eapply context_invariance...
       intros. apply extend_shadow. 
     SCase "x <> x0".
       apply T_Abs. apply IHt.
       eapply context_invariance...
       intros. unfold extend.
-      remember (beq_id y x0) as e. destruct e...
-      apply beq_id_eq in Heqe; subst.
-      rewrite <- Heqeq...
+      destruct (eq_id_dec y x0)...
+      subst. 
+      rewrite neq_id... 
 Qed.
 
 (* ################################### *)
@@ -1466,19 +1466,19 @@ Qed.
 Lemma assign_pres_store_typing : forall ST st l t,
   l < length st ->
   store_well_typed ST st ->
-  has_type empty ST t (store_Tlookup l ST) ->
+  empty; ST |- t \in (store_Tlookup l ST) ->
   store_well_typed ST (replace l t st).
 Proof with auto.
   intros ST st l t Hlen HST Ht.
   inversion HST; subst.
   split. rewrite length_replace...
   intros l' Hl'.
-  remember (beq_nat l' l) as ll'; destruct ll'.
+  destruct (beq_nat l' l) eqn: Heqll'. 
   Case "l' = l".
-    apply beq_nat_eq in Heqll'; subst.
+    apply beq_nat_true in Heqll'; subst.
     rewrite lookup_replace_eq...
   Case "l' <> l".
-    symmetry in Heqll'; apply beq_nat_false in Heqll'.
+    apply beq_nat_false in Heqll'. 
     rewrite lookup_replace_neq...
     rewrite length_replace in Hl'.
     apply H0...
@@ -1499,8 +1499,8 @@ Qed.
 
 Lemma store_weakening : forall Gamma ST ST' t T,
   extends ST' ST ->
-  has_type Gamma ST t T ->
-  has_type Gamma ST' t T.
+  Gamma; ST |- t \in T ->
+  Gamma; ST' |- t \in T.
 Proof with eauto.
   intros. has_type_cases (induction H0) Case; eauto.
   Case "T_Loc".
@@ -1516,7 +1516,7 @@ Qed.
 
 Lemma store_well_typed_snoc : forall ST st t1 T1,
   store_well_typed ST st ->
-  has_type empty ST t1 T1 ->
+  empty; ST |- t1 \in T1 ->
   store_well_typed (snoc ST T1) (snoc st t1).
 Proof with auto.
   intros.
@@ -1548,12 +1548,12 @@ Qed.
     preservation is actually quite straightforward. *)
 
 Theorem preservation : forall ST t t' T st st',
-  has_type empty ST t T ->
+  empty; ST |- t \in T ->
   store_well_typed ST st ->
   t / st ==> t' / st' ->
   exists ST',
     (extends ST' ST /\ 
-     has_type empty ST' t' T /\
+     empty; ST' |- t' \in T /\
      store_well_typed ST' st').
 Proof with eauto using store_weakening, extends_refl.
     remember (@empty ty) as Gamma.
@@ -1658,7 +1658,7 @@ Qed.
     a few new cases for the new syntactic constructs. *)
       
 Theorem progress : forall ST t T st,
-  has_type empty ST t T ->
+  empty; ST |- t \in T ->
   store_well_typed ST st ->
   (value t \/ exists t', exists st', t / st ==> t' / st').
 Proof with eauto.
@@ -1795,7 +1795,7 @@ Definition loop :=
 
 (** This term is well typed: *)
 
-Lemma loop_typeable : exists T, has_type empty [] loop T.
+Lemma loop_typeable : exists T, empty; nil |- loop \in T.
 Proof with eauto.
   eexists. unfold loop. unfold loop_fun.
   eapply T_App...
@@ -1875,7 +1875,7 @@ Qed.
 Definition factorial : tm :=
   (* FILL IN HERE *) admit.
 
-Lemma factorial_type : has_type empty nil factorial (TArrow TNat TNat).
+Lemma factorial_type : empty; nil |- factorial \in (TArrow TNat TNat).
 Proof with eauto.
   (* FILL IN HERE *) Admitted.
 

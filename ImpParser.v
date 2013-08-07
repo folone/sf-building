@@ -1,6 +1,6 @@
 (** * ImpParser: Lexing and Parsing in Coq *)
 
-(* $Date: 2012-07-25 16:43:16 -0400 (Wed, 25 Jul 2012) $ *)
+(* $Date: 2013-07-01 18:48:47 -0400 (Mon, 01 Jul 2013) $ *)
 
 (** The development of the [Imp] language in Imp.v completely ignores
     issues of concrete syntax -- how an ascii string that a programmer
@@ -101,9 +101,9 @@ Definition tokenize (s : string) : list string :=
 
 Example tokenize_ex1 : 
     tokenize "abc12==3  223*(3+(a+c))" %string
-  = ["abc", "12", "==", "3", "223",
-       "*", "(", "3", "+", "(",
-       "a", "+", "c", ")", ")"]%string.
+  = ["abc"; "12"; "=="; "3"; "223";
+       "*"; "("; "3"; "+"; "(";
+       "a"; "+"; "c"; ")"; ")"]%string.
 Proof. reflexivity. Qed.
 
 (* ####################################################### *)
@@ -123,14 +123,14 @@ Implicit Arguments NoneE [[X]].
 (* Some syntactic sugar to make writing nested match-expressions on
    optionE more convenient. *)
 
-Notation "'DO' ( x , y ) <== e1 ;; e2" 
+Notation "'DO' ( x , y ) <== e1 ; e2" 
    := (match e1 with
          | SomeE (x,y) => e2
          | NoneE err => NoneE err
        end)
    (right associativity, at level 60).
 
-Notation "'DO' ( x , y ) <-- e1 ;; e2 'OR' e3" 
+Notation "'DO' ( x , y ) <-- e1 ; e2 'OR' e3" 
    := (match e1 with
          | SomeE (x,y) => e2
          | NoneE err => e3
@@ -221,12 +221,12 @@ Fixpoint parsePrimaryExp (steps:nat) symtable (xs : list token)
   match steps with
   | 0 => NoneE "Too many recursive calls"
   | S steps' =>
-      DO (i, rest) <-- parseIdentifier symtable xs ;;
+      DO (i, rest) <-- parseIdentifier symtable xs ;
           SomeE (AId i, rest)
-      OR DO (n, rest) <-- parseNumber xs ;;
+      OR DO (n, rest) <-- parseNumber xs ;
           SomeE (ANum n, rest)
-      OR (DO (e, rest)  <== firstExpect "(" (parseSumExp steps' symtable) xs;;
-          DO (u, rest') <== expect ")" rest ;;
+      OR (DO (e, rest)  <== firstExpect "(" (parseSumExp steps' symtable) xs;
+          DO (u, rest') <== expect ")" rest ;
           SomeE(e,rest'))
   end
 with parseProductExp (steps:nat) symtable (xs : list token)  :=
@@ -234,9 +234,9 @@ with parseProductExp (steps:nat) symtable (xs : list token)  :=
   | 0 => NoneE "Too many recursive calls"
   | S steps' => 
     DO (e, rest) <== 
-      parsePrimaryExp steps' symtable xs ;;
+      parsePrimaryExp steps' symtable xs ;
     DO (es, rest') <== 
-      many (firstExpect "*" (parsePrimaryExp steps' symtable)) steps' rest;;
+      many (firstExpect "*" (parsePrimaryExp steps' symtable)) steps' rest;
     SomeE (fold_left AMult es e, rest')
   end
 with parseSumExp (steps:nat) symtable (xs : list token)  :=
@@ -244,16 +244,16 @@ with parseSumExp (steps:nat) symtable (xs : list token)  :=
   | 0 => NoneE "Too many recursive calls"
   | S steps' => 
     DO (e, rest) <== 
-      parseProductExp steps' symtable xs ;;
+      parseProductExp steps' symtable xs ;
     DO (es, rest') <== 
       many (fun xs =>
              DO (e,rest') <-- 
-               firstExpect "+" (parseProductExp steps' symtable) xs;;
+               firstExpect "+" (parseProductExp steps' symtable) xs;
                                  SomeE ( (true, e), rest')
              OR DO (e,rest') <== 
-               firstExpect "-" (parseProductExp steps' symtable) xs;;
+               firstExpect "-" (parseProductExp steps' symtable) xs;
                                  SomeE ( (false, e), rest'))
-                            steps' rest;;
+                            steps' rest;
       SomeE (fold_left (fun e0 term => 
                           match term with 
                             (true,  e) => APlus e0 e
@@ -270,20 +270,20 @@ Fixpoint parseAtomicExp (steps:nat) (symtable : string->nat) (xs : list token)  
 match steps with
   | 0 => NoneE "Too many recursive calls"
   | S steps' =>
-     DO    (u,rest) <-- expect "true" xs;;
+     DO    (u,rest) <-- expect "true" xs;
          SomeE (BTrue,rest)
-     OR DO (u,rest) <-- expect "false" xs;;
+     OR DO (u,rest) <-- expect "false" xs;
          SomeE (BFalse,rest)
-     OR DO (e,rest) <-- firstExpect "not" (parseAtomicExp steps' symtable) xs;;
+     OR DO (e,rest) <-- firstExpect "not" (parseAtomicExp steps' symtable) xs;
          SomeE (BNot e, rest)
-     OR DO (e,rest) <-- firstExpect "(" (parseConjunctionExp steps' symtable) xs;;
-          (DO (u,rest') <== expect ")" rest;; SomeE (e, rest'))
-     OR DO (e, rest) <== parseProductExp steps' symtable xs ;;
+     OR DO (e,rest) <-- firstExpect "(" (parseConjunctionExp steps' symtable) xs;
+          (DO (u,rest') <== expect ")" rest; SomeE (e, rest'))
+     OR DO (e, rest) <== parseProductExp steps' symtable xs ;
             (DO (e', rest') <-- 
-              firstExpect "==" (parseAExp steps' symtable) rest ;;
+              firstExpect "==" (parseAExp steps' symtable) rest ;
               SomeE (BEq e e', rest')
              OR DO (e', rest') <-- 
-               firstExpect "<=" (parseAExp steps' symtable) rest ;;
+               firstExpect "<=" (parseAExp steps' symtable) rest ;
                SomeE (BLe e e', rest')
              OR
                NoneE "Expected '==' or '<=' after arithmetic expression")
@@ -293,9 +293,9 @@ with parseConjunctionExp (steps:nat) (symtable : string->nat) (xs : list token) 
   | 0 => NoneE "Too many recursive calls"
   | S steps' =>
     DO (e, rest) <== 
-      parseAtomicExp steps' symtable xs ;;
+      parseAtomicExp steps' symtable xs ;
     DO (es, rest') <== 
-      many (firstExpect "&&" (parseAtomicExp steps' symtable)) steps' rest;;
+      many (firstExpect "&&" (parseAtomicExp steps' symtable)) steps' rest;
     SomeE (fold_left BAnd es e, rest')
   end.
 
@@ -314,28 +314,28 @@ Fixpoint parseSimpleCommand (steps:nat) (symtable:string->nat) (xs : list token)
   match steps with
   | 0 => NoneE "Too many recursive calls"
   | S steps' => 
-    DO (u, rest) <-- expect "SKIP" xs;;
+    DO (u, rest) <-- expect "SKIP" xs;
       SomeE (SKIP, rest)
     OR DO (e,rest) <-- 
-         firstExpect "IF" (parseBExp steps' symtable) xs;;
+         firstExpect "IF" (parseBExp steps' symtable) xs;
        DO (c,rest')  <== 
-         firstExpect "THEN" (parseSequencedCommand steps' symtable) rest;;
+         firstExpect "THEN" (parseSequencedCommand steps' symtable) rest;
        DO (c',rest'') <== 
-         firstExpect "ELSE" (parseSequencedCommand steps' symtable) rest';;
+         firstExpect "ELSE" (parseSequencedCommand steps' symtable) rest';
        DO (u,rest''') <== 
-         expect "END" rest'';;
+         expect "END" rest'';
        SomeE(IFB e THEN c ELSE c' FI, rest''')
     OR DO (e,rest) <-- 
-         firstExpect "WHILE" (parseBExp steps' symtable) xs;;
+         firstExpect "WHILE" (parseBExp steps' symtable) xs;
        DO (c,rest') <== 
-         firstExpect "DO" (parseSequencedCommand steps' symtable) rest;;
+         firstExpect "DO" (parseSequencedCommand steps' symtable) rest;
        DO (u,rest'') <== 
-         expect "END" rest';;
+         expect "END" rest';
        SomeE(WHILE e DO c END, rest'')
     OR DO (i, rest) <== 
-         parseIdentifier symtable xs;;
+         parseIdentifier symtable xs;
        DO (e, rest') <== 
-         firstExpect ":=" (parseAExp steps' symtable) rest;;
+         firstExpect ":=" (parseAExp steps' symtable) rest;
        SomeE(i ::= e, rest')
   end
 
@@ -344,10 +344,10 @@ with parseSequencedCommand (steps:nat) (symtable:string->nat) (xs : list token) 
   | 0 => NoneE "Too many recursive calls"
   | S steps' => 
       DO (c, rest) <== 
-        parseSimpleCommand steps' symtable xs;;
+        parseSimpleCommand steps' symtable xs;
       DO (c', rest') <-- 
-        firstExpect ";" (parseSequencedCommand steps' symtable) rest;;
-        SomeE(c ; c', rest')
+        firstExpect ";;" (parseSequencedCommand steps' symtable) rest;
+        SomeE(c ;; c', rest')
       OR
         SomeE(c, rest)
   end.
@@ -361,10 +361,11 @@ Definition parse (str : string) : optionE (com * list token) :=
 (* ####################################################### *)
 (** * Examples *)
 
+
 (*
 Eval compute in parse "
     IF x == y + 1 + 2 - y * 6 + 3 THEN
-      x := x * 1;
+      x := x * 1;;
       y := 0
     ELSE
       SKIP
@@ -376,68 +377,68 @@ Eval compute in parse "
                    (AMinus (APlus (APlus (AId (Id 1)) (ANum 1)) (ANum 2))
                       (AMult (AId (Id 1)) (ANum 6))) 
                    (ANum 3))
-        THEN Id 0 ::= AMult (AId (Id 0)) (ANum 1); Id 1 ::= ANum 0
+        THEN Id 0 ::= AMult (AId (Id 0)) (ANum 1);; Id 1 ::= ANum 0
         ELSE SKIP FI, [])
 *)
 
 (*
 Eval compute in parse "
-    SKIP;
-    z:=x*y*(x*x);
+    SKIP;;
+    z:=x*y*(x*x);;
     WHILE x==x DO
       IF z <= z*z && not x == 2 THEN
-        x := z;
+        x := z;;
         y := z
       ELSE
         SKIP
-      END;
+      END;;
       SKIP
-    END;
+    END;;
     x:=z  ".
 ====> 
      SomeE
-        (SKIP;
+        (SKIP;;
          Id 0 ::= AMult (AMult (AId (Id 1)) (AId (Id 2)))
-                        (AMult (AId (Id 1)) (AId (Id 1)));
+                        (AMult (AId (Id 1)) (AId (Id 1)));;
          WHILE BEq (AId (Id 1)) (AId (Id 1)) DO 
            IFB BAnd (BLe (AId (Id 0)) (AMult (AId (Id 0)) (AId (Id 0))))
                      (BNot (BEq (AId (Id 1)) (ANum 2)))
-              THEN Id 1 ::= AId (Id 0); Id 2 ::= AId (Id 0) 
-              ELSE SKIP FI; 
+              THEN Id 1 ::= AId (Id 0);; Id 2 ::= AId (Id 0) 
+              ELSE SKIP FI;; 
            SKIP 
-         END; 
+         END;; 
          Id 1 ::= AId (Id 0), 
         []) 
 *)
 
 (*
 Eval compute in parse "
-   SKIP;
-   z:=x*y*(x*x);
+   SKIP;;
+   z:=x*y*(x*x);;
    WHILE x==x DO
      IF z <= z*z && not x == 2 THEN
-       x := z;
+       x := z;;
        y := z
      ELSE
        SKIP
-     END;
+     END;;
      SKIP
-   END;
+   END;;
    x:=z  ".
 =====> 
       SomeE
-         (SKIP;
+         (SKIP;;
           Id 0 ::= AMult (AMult (AId (Id 1)) (AId (Id 2)))
-                (AMult (AId (Id 1)) (AId (Id 1)));
+                (AMult (AId (Id 1)) (AId (Id 1)));;
           WHILE BEq (AId (Id 1)) (AId (Id 1)) DO 
             IFB BAnd (BLe (AId (Id 0)) (AMult (AId (Id 0)) (AId (Id 0))))
                      (BNot (BEq (AId (Id 1)) (ANum 2)))
-              THEN Id 1 ::= AId (Id 0); 
+              THEN Id 1 ::= AId (Id 0);; 
                    Id 2 ::= AId (Id 0) 
               ELSE SKIP 
-            FI; 
+            FI;; 
             SKIP 
-          END; 
+          END;;
           Id 1 ::= AId (Id 0), 
          []).
 *)

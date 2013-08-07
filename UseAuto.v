@@ -1,6 +1,6 @@
 (** * UseAuto: Theory and Practice of Automation in Coq Proofs *)
 
-(* $Date: 2012-08-08 20:21:51 -0400 (Wed, 08 Aug 2012) $ *)
+(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
 (* Chapter maintained by Arthur Chargueraud *)
 
 (** In a machine-checked proof, every single detail has to be
@@ -109,13 +109,13 @@ Lemma solving_by_apply : forall (P Q : nat->Prop),
 Proof. auto. Qed.
 
 (** We can ask [auto] to tell us what proof it came up with,
-    by invoking [info auto] in place of [auto]. *)
+    by invoking [info_auto] in place of [auto]. *)
     
 Lemma solving_by_apply' : forall (P Q : nat->Prop),
   (forall n, Q n -> P n) -> 
   (forall n, Q n) ->
   P 2.
-Proof. info auto. Qed.
+Proof. info_auto. Qed.
   (* The output is: [intro P; intro Q; intro H;] *)
   (* followed with [intro H0; simple apply H; simple apply H0]. *)
   (* i.e., the sequence [intros P Q H H0; apply H; apply H0]. *)
@@ -137,7 +137,7 @@ Lemma solving_by_eapply : forall (P Q : nat->Prop),
   Q 1 -> P 2.
 Proof. auto. eauto. Qed.
 
-(** Remark: Again, we can use [info eauto] to see what proof [eauto]
+(** Remark: Again, we can use [info_eauto] to see what proof [eauto]
     comes up with. *)
 
 
@@ -358,8 +358,8 @@ Proof. auto. Qed.
 Lemma search_depth_0 : 
   True /\ True /\ True /\ True /\ True /\ True.
 Proof.
-  auto. 
-Admitted.
+  auto.
+Abort.
 
 (** The reason [auto] fails to solve the goal is because there are
     too many conjunctions. If there had been only five of them, [auto]
@@ -500,7 +500,7 @@ Proof. intros P H1 H3 H2. (* debug *) eauto. Qed.
 
 (** This time, the output message suggests that the proof search 
     investigates many possibilities. Replacing [debug eauto] with
-    [info eauto], we observe that the proof that [eauto] comes up 
+    [info_eauto], we observe that the proof that [eauto] comes up 
     with is actually not the simplest one.
            [apply H2; apply H3; apply H3; apply H3; exact H1]
     This proof goes through the proof obligation [P 3], even though 
@@ -780,7 +780,7 @@ Proof.
   forwards*: IHE1_1. 
     (* produces [H: st' = st'0]. *) skip.
 
-Admitted.
+Abort.
 
 (** To polish the proof script, it remains to factorize the calls
     to [auto], using the star symbol. The proof of determinism can then
@@ -804,8 +804,9 @@ End DeterministicImp.
 (** ** Preservation for STLC *)
 
 Module PreservationProgressStlc.
-  Require Import Stlc. 
+  Require Import StlcProp.
   Import STLC.
+  Import STLCProp.
 
 (** Consider the proof of perservation of STLC, shown below.
     This proof already uses [eauto] through the triple-dot
@@ -1343,7 +1344,7 @@ Proof.
   eauto.
   (* But then the second goal becomes [P 1], which is where we
      started from. So, [eauto] gets stuck at this point. *)
-Admitted.
+Abort.
 
 (** It is very important to understand that the hypothesis [forall n
     m, P m -> m <> 0 -> P n] is eauto-friendly, whereas [forall n m, m
@@ -1598,7 +1599,7 @@ Lemma transitivity_bad_hint_1 : forall S T,
   subtype S T.
 Proof. 
   intros. (* debug *) eauto. (* Investigates 106 applications... *)
-Admitted.
+Abort.
 
 (** Note that after closing the section, the hint [subtype_trans]
     is no longer active. *)
@@ -1687,7 +1688,7 @@ Lemma transitivity_workaround_2 : forall S T,
   subtype S T.
 Proof.
   intros. (* debug *) eauto. (* Investigates 0 applications *)
-Admitted.
+Abort.
 
 
 (* ####################################################### *)
