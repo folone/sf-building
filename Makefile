@@ -65,46 +65,46 @@ COQCHK?=$(COQBIN)coqchk
 #                    #
 ######################
 
-VFILES:=Symbols.v\
-  Preface.v\
-  Basics.v\
-  Induction.v\
-  Lists.v\
-  Poly.v\
-  MoreCoq.v\
-  Prop.v\
-  MoreProp.v\
-  Logic.v\
-  ProofObjects.v\
-  MoreInd.v\
-  SfLib.v\
-  Imp.v\
-  ImpParser.v\
-  ImpCEvalFun.v\
-  Extraction.v\
-  Equiv.v\
-  Hoare.v\
-  Hoare2.v\
-  HoareList.v\
-  HoareAsLogic.v\
-  Rel.v\
-  Smallstep.v\
-  Auto.v\
-  Types.v\
-  Stlc.v\
-  StlcProp.v\
-  Typechecking.v\
-  MoreStlc.v\
-  Records.v\
-  References.v\
-  Sub.v\
-  RecordSub.v\
-  Norm.v\
-  LibTactics.v\
-  UseTactics.v\
-  UseAuto.v\
+VFILES:=Postscript.v\
   PE.v\
-  Postscript.v
+  UseAuto.v\
+  UseTactics.v\
+  LibTactics.v\
+  Norm.v\
+  RecordSub.v\
+  Sub.v\
+  References.v\
+  Records.v\
+  MoreStlc.v\
+  Typechecking.v\
+  StlcProp.v\
+  Stlc.v\
+  Types.v\
+  Auto.v\
+  Smallstep.v\
+  Rel.v\
+  HoareAsLogic.v\
+  HoareList.v\
+  Hoare2.v\
+  Hoare.v\
+  Equiv.v\
+  Extraction.v\
+  ImpCEvalFun.v\
+  ImpParser.v\
+  Imp.v\
+  SfLib.v\
+  MoreInd.v\
+  ProofObjects.v\
+  Logic.v\
+  MoreProp.v\
+  Prop.v\
+  MoreCoq.v\
+  Poly.v\
+  Lists.v\
+  Induction.v\
+  Basics.v\
+  Preface.v\
+  Symbols.v
 
 -include $(addsuffix .d,$(VFILES))
 .SECONDARY: $(addsuffix .d,$(VFILES))
