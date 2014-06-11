@@ -10,6 +10,29 @@ Import STLC.
     theorem. *)
 
 (* ###################################################################### *)
+(** * Canonical Forms *)
+
+Lemma canonical_forms_bool : forall t,
+  empty |- t \in TBool ->
+  value t ->
+  (t = ttrue) \/ (t = tfalse).
+Proof.
+  intros t HT HVal.
+  inversion HVal; intros; subst; try inversion HT; auto.
+Qed.
+
+Lemma canonical_forms_fun : forall t T1 T2,
+  empty |- t \in (TArrow T1 T2) ->
+  value t ->
+  exists x u, t = tabs x T1 u.
+Proof.
+  intros t T1 T2 HT HVal.
+  inversion HVal; intros; subst; try inversion HT; subst; auto.
+  exists x0. exists t0.  auto.
+Qed.
+   
+
+(* ###################################################################### *)
 (** * Progress *)
 
 (** As before, the _progress_ theorem tells us that closed, well-typed
@@ -78,11 +101,11 @@ Proof with eauto.
     SCase "t1 is a value".
       destruct IHHt2...
       SSCase "t2 is also a value".
-        (* Since [t1] is a value and has an arrow type, it
-           must be an abs. Sometimes this is proved separately 
-           and called a "canonical forms" lemma. *) 
-        inversion H; subst. exists ([x0:=t2]t)...
-        solve by inversion. solve by inversion. 
+        assert (exists x0 t0, t1 = tabs x0 T11 t0).
+        eapply canonical_forms_fun; eauto.
+        destruct H1 as [x0 [t0 Heq]]. subst.
+        exists ([x0:=t2]t0)...
+
       SSCase "t2 steps".
         inversion H0 as [t2' Hstp]. exists (tapp t1 t2')...
 
@@ -93,11 +116,7 @@ Proof with eauto.
     right. destruct IHHt1...
     
     SCase "t1 is a value".
-      (* Since [t1] is a value of boolean type, it must
-         be true or false *)
-      inversion H; subst. solve by inversion.
-      SSCase "t1 = true". eauto.
-      SSCase "t1 = false". eauto.
+      destruct (canonical_forms_bool t1); subst; eauto.
 
     SCase "t1 also steps".
       inversion H as [t1' Hstp]. exists (tif t1' t2 t3)...
@@ -771,5 +790,5 @@ Tactic Notation "t_cases" tactic(first) ident(c) :=
 
 End STLCArith.
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-04-23 09:37:37 -0400 (Wed, 23 Apr 2014) $ *)
 

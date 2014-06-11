@@ -444,9 +444,9 @@ Proof.
     value of [X] we can define a Hoare rule for assignment that does,
     intuitively, "work forwards" rather than backwards.
   ------------------------------------------ (hoare_asgn_fwd)
-  {{fun st => Q st /\ st X = m}}
+  {{fun st => P st /\ st X = m}}
     X ::= a
-  {{fun st => Q st' /\ st X = aeval st' a }}
+  {{fun st => P st' /\ st X = aeval st' a }}
   (where st' = update st X m)
     Note that we use the original value of [X] to reconstruct the
     state [st'] before the assignment took place. Prove that this rule
@@ -456,13 +456,39 @@ Proof.
 *)
 
 Theorem hoare_asgn_fwd :
-  (forall {X Y: Type} {f g : X -> Y}, (forall (x: X), f x = g x) ->  f = g) ->
-  forall m a Q,
-  {{fun st => Q st /\ st X = m}}
+  (forall {X Y: Type} {f g : X -> Y},
+     (forall (x: X), f x = g x) ->  f = g) ->
+  forall m a P,
+  {{fun st => P st /\ st X = m}}
     X ::= a
-  {{fun st => Q (update st X m) /\ st X = aeval (update st X m) a }}.
+  {{fun st => P (update st X m) /\ st X = aeval (update st X m) a }}.
 Proof.
-  intros functional_extensionality v a Q.
+  intros functional_extensionality m a P.
+  (* FILL IN HERE *) Admitted.
+(** [] *)
+
+(** **** Exercise: 2 stars, advanced (hoare_asgn_fwd_exists) *)
+(** Another way to define a forward rule for assignment is to
+    existentially quantify over the previous value of the assigned
+    variable.
+  ------------------------------------------ (hoare_asgn_fwd_exists)
+  {{fun st => P st}}
+    X ::= a
+  {{fun st => exists m, P (update st X m) /\
+                 st X = aeval (update st X m) a }}
+*)
+(* This rule was proposed by Nick Giannarakis and Zoe Paraskevopoulou. *)
+
+Theorem hoare_asgn_fwd_exists :
+  (forall {X Y: Type} {f g : X -> Y},
+     (forall (x: X), f x = g x) ->  f = g) ->
+  forall a P,
+  {{fun st => P st}}
+    X ::= a
+  {{fun st => exists m, P (update st X m) /\
+                st X = aeval (update st X m) a }}.
+Proof.
+  intros functional_extensionality a P.
   (* FILL IN HERE *) Admitted.
 (** [] *)
 
@@ -679,6 +705,8 @@ Proof.
   intros P Q HP HQ. destruct HP as [y HP']. eapply HQ. eassumption.
 Qed.
 
+    
+
 (** **** Exercise: 2 stars (hoare_asgn_examples_2) *)
 (** Translate these informal Hoare triples...
        {{ X + 1 <= 5 }}  X ::= X + 1  {{ X <= 5 }}
@@ -892,6 +920,59 @@ Proof.
       split. assumption.
              apply bexp_eval_false. assumption. Qed.
 
+
+(* ####################################################### *) 
+
+(** * Hoare Logic: So Far *)
+
+(** 
+Idea: create a _domain specific logic_ for reasoning about properties of Imp programs.
+
+- This hides the low-level details of the semantics of the program
+- Leads to a compositional reasoning process
+
+
+The basic structure is given by _Hoare triples_ of the form:
+  {{P}} c {{Q}}
+]] 
+
+- [P] and [Q] are predicates about the state of the Imp program
+- "If command [c] is started in a state satisfying assertion
+        [P], and if [c] eventually terminates in some final state,
+        then this final state will satisfy the assertion [Q]."
+
+*)
+
+
+(** ** Hoare Logic Rules (so far) *)
+
+(**
+             ------------------------------ (hoare_asgn)
+             {{Q [X |-> a]}} X::=a {{Q}}
+
+             --------------------  (hoare_skip)
+             {{ P }} SKIP {{ P }}
+
+               {{ P }} c1 {{ Q }} 
+               {{ Q }} c2 {{ R }}
+              ---------------------  (hoare_seq)
+              {{ P }} c1;;c2 {{ R }}
+
+              {{P /\  b}} c1 {{Q}}
+              {{P /\ ~b}} c2 {{Q}}
+      ------------------------------------  (hoare_if)
+      {{P}} IFB b THEN c1 ELSE c2 FI {{Q}} 
+
+
+                {{P'}} c {{Q'}}
+                   P ->> P'
+                   Q' ->> Q
+         -----------------------------   (hoare_consequence)
+                {{P}} c {{Q}}
+*)
+
+
+(** *** Example *)
 (** Here is a formal proof that the program we used to motivate the
     rule satisfies the specification we gave. *)
 
@@ -1071,16 +1152,28 @@ End If1.
       {{P}} WHILE b DO c END {{Q}} 
     is a valid triple. *)
 
+(** *** *)
+
 (** First of all, let's think about the case where [b] is false at the
     beginning -- i.e., let's assume that the loop body never executes
     at all.  In this case, the loop behaves like [SKIP], so we might
-    be tempted to write
+    be tempted to write: *)
+
+(**
       {{P}} WHILE b DO c END {{P}}.
+*)
+
+(** 
     But, as we remarked above for the conditional, we know a
     little more at the end -- not just [P], but also the fact
     that [b] is false in the current state.  So we can enrich the
     postcondition a little:
+*)
+(** 
       {{P}} WHILE b DO c END {{P /\ ~b}}
+*)
+
+(** 
     What about the case where the loop body _does_ get executed?
     In order to ensure that [P] holds when the loop finally
     exits, we certainly need to make sure that the command [c]
@@ -1090,21 +1183,47 @@ End If1.
     re-establishes [P] when it finishes, we can always assume
     that [P] holds at the beginning of [c].  This leads us to the
     following rule:
+*)
+(** 
                    {{P}} c {{P}}
         -----------------------------------  
         {{P}} WHILE b DO c END {{P /\ ~b}}
-
+*)
+(** 
     This is almost the rule we want, but again it can be improved a
     little: at the beginning of the loop body, we know not only that
     [P] holds, but also that the guard [b] is true in the current
     state.  This gives us a little more information to use in
     reasoning about [c] (showing that it establishes the invariant by
     the time it finishes).  This gives us the final version of the rule:
+*)
+(**
                {{P /\ b}} c {{P}}
         -----------------------------------  (hoare_while)
         {{P}} WHILE b DO c END {{P /\ ~b}}
     The proposition [P] is called an _invariant_ of the loop.
+*)
 
+Lemma hoare_while : forall P b c,
+  {{fun st => P st /\ bassn b st}} c {{P}} ->
+  {{P}} WHILE b DO c END {{fun st => P st /\ ~ (bassn b st)}}.
+Proof.
+  intros P b c Hhoare st st' He HP.
+  (* Like we've seen before, we need to reason by induction 
+     on [He], because, in the "keep looping" case, its hypotheses 
+     talk about the whole loop instead of just [c]. *)
+  remember (WHILE b DO c END) as wcom eqn:Heqwcom.
+  ceval_cases (induction He) Case;
+    try (inversion Heqwcom); subst; clear Heqwcom.
+  Case "E_WhileEnd".
+    split. assumption. apply bexp_eval_false. assumption.
+  Case "E_WhileLoop".
+    apply IHHe2. reflexivity.
+    apply (Hhoare st st'). assumption.
+      split. assumption. apply bexp_eval_true. assumption.
+Qed.
+
+(**
     One subtlety in the terminology is that calling some assertion [P]
     a "loop invariant" doesn't just mean that it is preserved by the
     body of the loop in question (i.e., [{{P}} c {{P}}], where [c] is
@@ -1123,26 +1242,6 @@ End If1.
 
 
 
-Lemma hoare_while : forall P b c,
-  {{fun st => P st /\ bassn b st}} c {{P}} ->
-  {{P}} WHILE b DO c END {{fun st => P st /\ ~ (bassn b st)}}.
-Proof.
-  intros P b c Hhoare st st' He HP.
-  (* Like we've seen before, we need to reason by induction 
-     on He, because, in the "keep looping" case, its hypotheses 
-     talk about the whole loop instead of just c *)
-  remember (WHILE b DO c END) as wcom eqn:Heqwcom.
-  ceval_cases (induction He) Case;
-    try (inversion Heqwcom); subst; clear Heqwcom.
-
-  Case "E_WhileEnd".
-    split. assumption. apply bexp_eval_false. assumption.
-
-  Case "E_WhileLoop".
-    apply IHHe2. reflexivity.
-    apply (Hhoare st st'). assumption.
-      split. assumption. apply bexp_eval_true. assumption.
-Qed.
 
 Example while_example :
     {{fun st => st X <= 3}}
@@ -1167,6 +1266,7 @@ Qed.
 
 
 
+(** *** *)
 (** We can use the while rule to prove the following Hoare triple,
     which may seem surprising at first... *)
 
@@ -1432,7 +1532,7 @@ End Himp.
 
 
 (* ####################################################### *)
-(** ** Review *)
+(** ** Complete List of Hoare Logic Rules *)
 
 (** Above, we've introduced Hoare Logic as a tool to reasoning
     about Imp programs. In the reminder of this chapter we will
@@ -1469,5 +1569,5 @@ End Himp.
     that programs satisfy specifications of their behavior.
 *)
 
-(* $Date: 2013-07-18 09:59:22 -0400 (Thu, 18 Jul 2013) $ *)
+(* $Date: 2014-02-27 16:56:35 -0500 (Thu, 27 Feb 2014) $ *)
 

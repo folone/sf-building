@@ -31,6 +31,8 @@ Inductive boollist : Type :=
     our list manipulating functions ([length], [rev], etc.)  for each
     new datatype definition. *)
 
+(** *** *)
+
 (** To avoid all this repetition, Coq supports _polymorphic_
     inductive type definitions.  For example, here is a _polymorphic
     list_ datatype. *)
@@ -38,6 +40,7 @@ Inductive boollist : Type :=
 Inductive list (X:Type) : Type :=
   | nil : list X
   | cons : X -> list X -> list X.
+
 
 (** This is exactly like the definition of [natlist] from the
     previous chapter, except that the [nat] argument to the [cons]
@@ -82,6 +85,8 @@ Check (cons nat 2 (cons nat 1 (nil nat))).
     versions of all the list-processing functions that we wrote
     before.  Here is [length], for example: *)
 
+(** *** *)
+
 Fixpoint length (X:Type) (l:list X) : nat :=
   match l with
   | nil      => 0
@@ -109,6 +114,8 @@ Example test_length2 :
     length bool (cons bool true (nil bool)) = 1.
 Proof. reflexivity.  Qed.
 
+
+(** *** *)
 (** Let's close this subsection by re-implementing a few other
     standard list functions on our new polymorphic lists: *)
 
@@ -276,7 +283,7 @@ Definition list123' := cons _ 1 (cons _ 2 (cons _ 3 (nil _))).
     throughout our programs, we can tell Coq _always_ to infer the
     type argument(s) of a given function. The [Arguments] directive
     specifies the name of the function or constructor, and then lists
-    its argument names, with curly brackets around any arguments to be
+    its argument names, with curly braces around any arguments to be
     treated as implicit. 
     *)
 
@@ -290,6 +297,8 @@ Arguments snoc {X} l v.
 (* note: no _ arguments required... *)
 Definition list123'' := cons 1 (cons 2 (cons 3 nil)).
 Check (length list123'').
+
+(** *** *)
 
 (** Alternatively, we can declare an argument to be implicit while
     defining the function itself, by surrounding the argument in curly
@@ -306,6 +315,8 @@ Fixpoint length'' {X:Type} (l:list X) : nat :=
     one.)  We will use this style whenever possible, although we will
     continue to use use explicit [Argument] declarations for
     [Inductive] constructors. *)
+
+(** *** *)
 
 (** One small problem with declaring arguments [Implicit] is
     that, occasionally, Coq does not have enough local information to
@@ -331,6 +342,7 @@ Check @nil.
 
 Definition mynil' := @nil nat.
 
+(** *** *)
 (** Using argument synthesis and implicit arguments, we can
     define convenient notation for lists, as before.  Since we have
     made the constructor type arguments implicit, Coq will know to
@@ -347,6 +359,7 @@ Notation "x ++ y" := (app x y)
 
 Definition list123''' := [1; 2; 3].
 
+Check ([3 + 4] ++ nil).
 
 
 
@@ -417,6 +430,7 @@ Notation "X * Y" := (prod X Y) : type_scope.
     should be used when parsing types.  This avoids a clash with the
     multiplication symbol.) *)
 
+(** *** *)
 (** A note of caution: it is easy at first to get [(x,y)] and
     [X*Y] confused.  Remember that [(x,y)] is a _value_ built from two
     other values; [X*Y] is a _type_ built from two other types.  If
@@ -490,6 +504,7 @@ Inductive option (X:Type) : Type :=
 Arguments Some {X} _. 
 Arguments None {X}. 
 
+(** *** *)
 (** We can now rewrite the [index] function so that it works
     with any type of lists. *)
 
@@ -657,6 +672,7 @@ Fixpoint filter {X:Type} (test: X->bool) (l:list X)
 Example test_filter1: filter evenb [1;2;3;4] = [2;4].
 Proof. reflexivity.  Qed.
 
+(** *** *)
 Definition length_is_1 {X : Type} (l : list X) : bool :=
   beq_nat (length l) 1.
 
@@ -665,6 +681,8 @@ Example test_filter2:
            [ [1; 2]; [3]; [4]; [5;6;7]; []; [8] ]
   = [ [3]; [4]; [8] ].
 Proof. reflexivity.  Qed.
+
+(** *** *)
 
 (** We can use [filter] to give a concise version of the
     [countoddmembers] function from the [Lists] chapter. *)
@@ -763,6 +781,7 @@ Fixpoint map {X Y:Type} (f:X->Y) (l:list X)
   | h :: t => (f h) :: (map f t)
   end.
 
+(** *** *)
 (** It takes a function [f] and a list [ l = [n1, n2, n3, ...] ]
     and returns the list [ [f n1, f n2, f n3,...] ], where [f] has
     been applied to each element of [l] in turn.  For example: *)
@@ -789,6 +808,7 @@ Proof. reflexivity.  Qed.
 
 
 
+(** ** Map for options *)
 (** **** Exercise: 3 stars (map_rev) *)
 (** Show that [map] and [rev] commute.  You may need to define an
     auxiliary lemma. *)
@@ -854,6 +874,7 @@ Fixpoint fold {X Y:Type} (f: X->Y->Y) (l:list X) (b:Y) : Y :=
   | h :: t => f h (fold f t b)
   end.
 
+(** *** *)
 
 (** Intuitively, the behavior of the [fold] operation is to
     insert a given binary operator [f] between every pair of elements
@@ -910,6 +931,7 @@ Proof. reflexivity. Qed.
 Example constfun_example2 : (constfun 5) 99 = 5.
 Proof. reflexivity. Qed.
 
+(** *** *)
 (** Similarly, but a bit more interestingly, here is a function
     that takes a function [f] from numbers to some type [X], a number
     [k], and a value [x], and constructs a function that behaves
@@ -925,6 +947,8 @@ Definition override {X: Type} (f: nat->X) (k:nat) (x:X) : nat->X:=
 
 Definition fmostlytrue := override (override ftrue 1 false) 3 false.
 
+(** *** *)
+
 Example override_example1 : fmostlytrue 0 = true.
 Proof. reflexivity. Qed.
 
@@ -936,6 +960,8 @@ Proof. reflexivity. Qed.
 
 Example override_example4 : fmostlytrue 3 = false.
 Proof. reflexivity. Qed.
+
+(** *** *)
 
 (** **** Exercise: 1 star (override_example) *)
 (** Before starting to work on the following proof, make sure you
@@ -956,6 +982,8 @@ Proof.
     one very useful tactic that will also help us with proving
     properties of some of the other functions we have introduced in
     this chapter. *)
+
+(* ###################################################### *)
 
 (* ###################################################### *)
 (** * The [unfold] Tactic *)
@@ -1050,5 +1078,5 @@ Definition fold_map {X Y:Type} (f : X -> Y) (l : list X) : list Y :=
 (* FILL IN HERE *)
 (** [] *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2013-09-26 14:40:26 -0400 (Thu, 26 Sep 2013) $ *)
 

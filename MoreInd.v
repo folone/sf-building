@@ -1,6 +1,6 @@
 (** * MoreInd: More on Induction *)
 
-Require Export ProofObjects.
+Require Export "ProofObjects".
 
 (* ##################################################### *)
 (** * Induction Principles *)
@@ -22,7 +22,7 @@ Check nat_ind.
               (forall n : nat, P n -> P (S n))  ->
               forall n : nat, P n  *)
 
-
+(** *** *)
 (** The [induction] tactic is a straightforward wrapper that, at
     its core, simply performs [apply t_ind].  To see this more
     clearly, let's experiment a little with using [apply nat_ind]
@@ -416,7 +416,7 @@ Proof.
 (** One potentially confusing feature of the [induction] tactic is
 that it happily lets you try to set up an induction over a term
 that isn't sufficiently general.  The net effect of this will be 
-do lose information (much as [destruct] can do), and leave
+to lose information (much as [destruct] can do), and leave
 you unable to complete the proof. Here's an example: *)
 
 Lemma one_not_beautiful_FAILED: ~ beautiful 1. 
@@ -1153,6 +1153,6 @@ Qed.
     scratch.  Only lemmas whose proofs pass the type-checker can be
     used in further proof developments.  *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-06-05 07:22:21 -0400 (Thu, 05 Jun 2014) $ *)
 
 

@@ -159,7 +159,6 @@ Tactic Notation "step_cases" tactic(first) ident(c) :=
   | Case_aux c "ST_Iszero" ].
 
 Hint Constructors step.
-
 (** Notice that the [step] relation doesn't care about whether
     expressions make global sense -- it just checks that the operation
     in the _next_ reduction step is being applied to the right kinds
@@ -214,6 +213,7 @@ Lemma value_is_nf : forall t,
 Proof.
   (* FILL IN HERE *) Admitted.
 (** [] *)
+
 
 (** **** Exercise: 3 stars, optional (step_deterministic) *)
 (** Using [value_is_nf], we can show that the [step] relation is
@@ -342,6 +342,32 @@ Proof.
 (** [] *)
 
 (* ###################################################################### *)
+(** ** Canonical forms *)
+
+(** The following two lemmas capture the basic property that defines
+    the shape of well-typed values.  They say that the definition of value
+    and the typing relation agree. *)
+
+Lemma bool_canonical : forall t,
+  |- t \in TBool -> value t -> bvalue t.
+Proof.
+  intros t HT HV.
+  inversion HV; auto.
+
+  induction H; inversion HT; auto.
+Qed.
+
+Lemma nat_canonical : forall t,
+  |- t \in TNat -> value t -> nvalue t.
+Proof.
+  intros t HT HV.
+  inversion HV.
+  inversion H; subst; inversion HT.   
+
+  auto.  
+Qed.
+
+(* ###################################################################### *)
 (** ** Progress *)
 
 (** The typing relation enjoys two critical properties.  The first is
@@ -363,14 +389,11 @@ Proof with auto.
      T_False, were eliminated immediately by auto *)
   Case "T_If".
     right. inversion IHHT1; clear IHHT1.
-    SCase "t1 is a value". inversion H; clear H.
-      SSCase "t1 is a bvalue". inversion H0; clear H0.
-        SSSCase "t1 is ttrue".
-          exists t2...
-        SSSCase "t1 is tfalse". 
-          exists t3...
-      SSCase "t1 is an nvalue".
-        solve by inversion 2.  (* on H and HT1 *)
+    SCase "t1 is a value".
+    apply (bool_canonical t1 HT1) in H.
+    inversion H; subst; clear H.
+      exists t2...
+      exists t3...
     SCase "t1 can take a step".
       inversion H as [t1' H1].
       exists (tif t1' t2 t3)...
@@ -390,10 +413,8 @@ Proof with auto.
         \in T].  By the IH, either [t1] is a value or else [t1] can step
         to some [t1'].  
 
-            - If [t1] is a value, then it is either an [nvalue] or a
-              [bvalue].  But it cannot be an [nvalue], because we know
-              [|- t1 \in Bool] and there are no rules assigning type
-              [Bool] to any term that could be an [nvalue].  So [t1]
+            - If [t1] is a value, then by the canonical forms lemmas
+              and the fact that [|- t1 \in Bool] we have that [t1] 
               is a [bvalue] -- i.e., it is either [true] or [false].
               If [t1 = true], then [t] steps to [t2] by [ST_IfTrue],
               while if [t1 = false], then [t] steps to [t3] by
@@ -457,7 +478,7 @@ Proof with auto.
          (* and we can deal with several impossible
             cases all at once *)
          try (solve by inversion).
-    Case "T_If". inversion HE; subst.
+    Case "T_If". inversion HE; subst; clear HE.
       SCase "ST_IFTrue". assumption.
       SCase "ST_IfFalse". assumption.
       SCase "ST_If". apply T_If; try assumption.
@@ -513,6 +534,26 @@ Proof with eauto.
 (** [] *)
 
 (* ###################################################################### *)
+(** ** Type Soundness *)
+
+(** Putting progress and preservation together, we can see that a
+    well-typed term can _never_ reach a stuck state.  *)
+
+Definition multistep := (multi step).
+Notation "t1 '==>*' t2" := (multistep t1 t2) (at level 40).
+
+Corollary soundness : forall t t' T,
+  |- t \in T -> 
+  t ==>* t' ->
+  ~(stuck t').
+Proof. 
+  intros t t' T HT P. induction P; intros [R S].
+  destruct (progress x T HT); auto.   
+  apply IHP.  apply (preservation x y T HT H).
+  unfold stuck. split; auto.   Qed.
+
+
+(* ###################################################################### *)
 (** * Aside: the [normalize] Tactic *)
 
 (** When experimenting with definitions of programming languages in
@@ -556,6 +597,7 @@ Proof.
   apply multi_refl.
 Qed.
 
+
 (** The following custom [Tactic Notation] definition captures this
     pattern.  In addition, before each [multi_step] we print out the
     current goal, so that the user can follow how the term is being
@@ -566,6 +608,7 @@ Tactic Notation "normalize" :=
    repeat (print_goal; eapply multi_step ; 
              [ (eauto 10; fail) | (instantiate; simpl)]);
    apply multi_refl.
+
 
 Example astep_example1'' : 
   (APlus (ANum 3) (AMult (ANum 3) (ANum 4))) / empty_state 
@@ -580,6 +623,7 @@ Proof.
    (multi (astep empty_state) (ANum 15) (ANum 15))
 *)
 Qed.
+
 
 (** The [normalize] tactic also provides a simple way to calculate
     what the normal form of a term is, by proving a goal with an
@@ -621,24 +665,6 @@ Proof.
   (* FILL IN HERE *) Admitted.
 (** [] *)
 
-(* ###################################################################### *)
-(** ** Type Soundness *)
-
-(** Putting progress and preservation together, we can see that a
-    well-typed term can _never_ reach a stuck state.  *)
-
-Definition multistep := (multi step).
-Notation "t1 '==>*' t2" := (multistep t1 t2) (at level 40).
-
-Corollary soundness : forall t t' T,
-  |- t \in T -> 
-  t ==>* t' ->
-  ~(stuck t').
-Proof. 
-  intros t t' T HT P. induction P; intros [R S].
-  destruct (progress x T HT); auto.   
-  apply IHP.  apply (preservation x y T HT H).
-  unfold stuck. split; auto.   Qed.
 
 (* ###################################################################### *)
 (** ** Additional Exercises *)
@@ -758,4 +784,4 @@ Proof.
 []
 *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-04-08 23:31:16 -0400 (Tue, 08 Apr 2014) $ *)

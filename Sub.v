@@ -109,9 +109,9 @@ Require Export MoreStlc.
 (** *** *)
 (** Of course, real OO languages have lots of other features...
        - mutable fields
-       - [private]
+       - [private] and other visibility modifiers
        - method inheritance
-       - static fields
+       - static components
        - etc., etc.
 
     We'll ignore all these and focus on core mechanisms. *)
@@ -153,8 +153,8 @@ Require Export MoreStlc.
                               S <: U    U <: T
                               ----------------                        (S_Trans)
                                    S <: T
-    ... and a rule of _reflexivity_, since any type [T] is always just
-    as good as itself:
+    ... and a rule of _reflexivity_, since certainly any type [T] is 
+    as good as itself:  
                                    ------                              (S_Refl)
                                    T <: T
 *)
@@ -166,16 +166,14 @@ Require Export MoreStlc.
     than" another if each of its components is.
                             S1 <: T1    S2 <: T2
                             --------------------                        (S_Prod)
-                               S1*S2 <: T1*T2
+                             S1 * S2 <: T1 * T2
 *)
 
 (** *** Arrows *)
 
 (** Suppose we have two functions [f] and [g] with these types:
-<<
        f : C -> Student 
-       g : (C -> Person) -> D
->>
+       g : (C->Person) -> D
     That is, [f] is a function that yields a record of type [Student],
     and [g] is a (higher-order) function that expects its (function)
     argument to yield a record of type [Person].  Also suppose, even
@@ -194,12 +192,12 @@ Require Export MoreStlc.
     their results are:
                                   S2 <: T2
                               ----------------                     (S_Arrow_Co)
-                              S1->S2 <: S1->T2
+                            S1 -> S2 <: S1 -> T2
     We can generalize this to allow the arguments of the two arrow
     types to be in the subtype relation as well:
                             T1 <: S1    S2 <: T2
                             --------------------                      (S_Arrow)
-                              S1->S2 <: T1->T2
+                            S1 -> S2 <: T1 -> T2
     Notice that the argument types are subtypes "the other way round":
     in order to conclude that [S1->S2] to be a subtype of [T1->T2], it
     must be the case that [T1] is a subtype of [S1].  The arrow
@@ -207,10 +205,8 @@ Require Export MoreStlc.
     and _covariant_ in its second. 
 
     Here is an example that illustrates this: 
-<<
        f : Person -> C
        g : (Student -> C) -> D
->>
     The application [g f] is safe, because the only thing the body of
     [g] can do with [f] is to apply it to some argument of type
     [Student].  Since [f] requires records having (at least) the
@@ -227,24 +223,6 @@ Require Export MoreStlc.
     viewed as having type [T1->T2]. 
 *)
 
-
-(** **** Exercise: 2 stars (arrow_sub_wrong) *)
-(** Suppose we had incorrectly defined subtyping as covariant on both
-    the right and the left of arrow types:
-                            S1 <: T1    S2 <: T2
-                            --------------------                (S_Arrow_wrong)
-                              S1->S2 <: T1->T2
-    Give a concrete example of functions [f] and [g] with types...
-<<
-       f : Student -> Nat
-       g : (Person -> Nat) -> Nat
->>
-    ... such that the application [g f] will get stuck during
-    execution.
-
-[]
-*)
-
 (** *** Records *)
 
 (** What about subtyping for record types? *)
@@ -256,11 +234,9 @@ Require Export MoreStlc.
    fields [x] and [y], it is perfectly safe for it to receive a record
    with fields [x], [y], and [z]; the [z] field will simply be ignored.
    For example,
-<<
        {name:String, age:Nat, gpa:Nat} <: {name:String, age:Nat}
        {name:String, age:Nat} <: {name:String}
        {name:String} <: {}
->>
    This is known as "width subtyping" for records. *)
 
 (** We can also create a subtype of a record type by replacing the type
@@ -268,16 +244,12 @@ Require Export MoreStlc.
    record with a field [x] of type [T], it will be happy with a record
    having a field [x] of type [S] as long as [S] is a subtype of
    [T]. For example,
-<<
        {x:Student} <: {x:Person}
->>
    This is known as "depth subtyping". *)
 
 (** Finally, although the fields of a record type are written in a
    particular order, the order does not really matter. For example, 
-<<
        {name:String,age:Nat} <: {age:Nat,name:String}
->>
    This is known as "permutation subtyping". *)
 
 (** We could formalize these requirements in a single subtyping rule
@@ -338,6 +310,21 @@ Require Export MoreStlc.
       inheritance" of interfaces (i.e., permutation is allowed for
       interfaces). *)
 
+(** **** Exercise: 2 stars (arrow_sub_wrong) *)
+(** Suppose we had incorrectly defined subtyping as covariant on both
+    the right and the left of arrow types:
+                            S1 <: T1    S2 <: T2
+                            --------------------                (S_Arrow_wrong)
+                            S1 -> S2 <: T1 -> T2
+    Give a concrete example of functions [f] and [g] with the following types...
+       f : Student -> Nat
+       g : (Person -> Nat) -> Nat
+    ... such that the application [g f] will get stuck during
+    execution.
+
+[]
+*)
+
 (** *** Top *)
 
 (** Finally, it is natural to give the subtype relation a maximal
@@ -377,11 +364,11 @@ Require Export MoreStlc.
 
                             S1 <: T1    S2 <: T2
                             --------------------                       (S_Prod)
-                               S1*S2 <: T1*T2
+                             S1 * S2 <: T1 * T2
 
                             T1 <: S1    S2 <: T2
                             --------------------                      (S_Arrow)
-                              S1->S2 <: T1->T2
+                            S1 -> S2 <: T1 -> T2
 
                                n > m
                  ---------------------------------                 (S_RcdWidth)
@@ -400,7 +387,6 @@ Require Export MoreStlc.
 
 (* ############################################### *)
 (** ** Exercises *)
-
 
 (** **** Exercise: 1 star, optional (subtype_instances_tf_1) *)
 (** Suppose we have types [S], [T], [U], and [V] with [S <: T]
@@ -453,7 +439,7 @@ Where does the type [Top->Top->Student] fit into this order?
            exists T,
               S = T->T  /\  T <: A
 
-      forall S T1 T1,
+      forall S T1 T2,
            (S <: T1 -> T2) ->
            exists S1 S2,
               S = S1 -> S2  /\  T1 <: S1  /\  S2 <: T2 
@@ -464,7 +450,7 @@ Where does the type [Top->Top->Student] fit into this order?
       exists S,
            S->S <: S   
 
-      forall S T2 T2,
+      forall S T1 T2,
            S <: T1*T2 ->
            exists S1 S2,
               S = S1*S2  /\  S1 <: T1  /\  S2 <: T2  
@@ -546,6 +532,9 @@ Where does the type [Top->Top->Student] fit into this order?
 
 []
 *)
+
+
+
 
 (** **** Exercise: 2 stars (small_large_4) *)
 (** 
@@ -663,8 +652,8 @@ Tactic Notation "t_cases" tactic(first) ident(c) :=
 (* ################################### *)
 (** *** Substitution *)
 
-(** The definition of substitution remains the same as for the
-    ordinary STLC. *)
+(** The definition of substitution remains exactly the same as for the
+    pure STLC. *)
 
 Fixpoint subst (x:id) (s:tm)  (t:tm) : tm :=
   match t with
@@ -750,17 +739,17 @@ Reserved Notation "T '<:' U" (at level 40).
 
 Inductive subtype : ty -> ty -> Prop :=
   | S_Refl : forall T,
-    T <: T
+      T <: T
   | S_Trans : forall S U T,
-    S <: U ->
-    U <: T ->
-    S <: T
+      S <: U ->
+      U <: T ->
+      S <: T
   | S_Top : forall S,
-    S <: TTop
+      S <: TTop
   | S_Arrow : forall S1 S2 T1 T2,
-    T1 <: S1 ->
-    S2 <: T2 ->
-    (TArrow S1 S2) <: (TArrow T1 T2)
+      T1 <: S1 ->
+      S2 <: T2 ->
+      (TArrow S1 S2) <: (TArrow T1 T2)
 where "T '<:' U" := (subtype T U).
 
 (** Note that we don't need any special rules for base types: they are
@@ -823,7 +812,7 @@ Proof.
 
 Example subtyping_example_0 :
   (TArrow C Person) <: (TArrow C TTop).
-(* C->Person <: C->Top *)
+  (* C->Person <: C->Top *)
 Proof.
   apply S_Arrow.
     apply S_Refl. auto.
@@ -836,7 +825,7 @@ Qed.
 (** **** Exercise: 1 star, optional (subtyping_example_1) *)
 Example subtyping_example_1 :
   (TArrow TTop Student) <: (TArrow (TArrow C C) Person).
-(* Top->Student <: (C->C)->Person *)
+  (* Top->Student <: (C->C)->Person *)
 Proof with eauto.
   (* FILL IN HERE *) Admitted.
 (** [] *)
@@ -844,7 +833,7 @@ Proof with eauto.
 (** **** Exercise: 1 star, optional (subtyping_example_2) *)
 Example subtyping_example_2 :
   (TArrow TTop Person) <: (TArrow Person TTop).
-(* Top->Person <: Person->Top *)
+  (* Top->Person <: Person->Top *)
 Proof with eauto.
   (* FILL IN HERE *) Admitted.
 (** [] *)
@@ -953,7 +942,7 @@ End Examples2.
     to record a couple of critical structural properties of the subtype
     relation: 
        - [Bool] is the only subtype of [Bool]
-       - every subtype of an arrow type _is_ an arrow type. *)
+       - every subtype of an arrow type is itself an arrow type. *)
     
 (** These are called _inversion lemmas_ because they play the same
     role in later proofs as the built-in [inversion] tactic: given a
@@ -1424,19 +1413,20 @@ Qed.
     T].
 
     _Proof_: Let [t] and [T] be given such that [empty |- t : T].  We
-    go by induction on the structure of this typing derivation,
+    proceed by induction on the structure of this typing derivation,
     leaving [t'] general.  The cases [T_Abs], [T_Unit], [T_True], and
     [T_False] cases are vacuous because abstractions and constants
     don't step.  Case [T_Var] is vacuous as well, since the context is
     empty.
 
      - If the final step of the derivation is by [T_App], then there
-       are terms [t1] [t2] and types [T1] [T2] such that [t = t1 t2],
-       [T = T2], [empty |- t1 : T1 -> T2] and [empty |- t2 : T1].
+       are terms [t1] and [t2] and types [T1] and [T2] such that 
+       [t = t1 t2], [T = T2], [empty |- t1 : T1 -> T2], and 
+       [empty |- t2 : T1].
 
-       By inspection of the definition of the step relation, there are
-       three ways [t1 t2] can step.  Cases [ST_App1] and [ST_App2]
-       follow immediately by the induction hypotheses for the typing
+       By the definition of the step relation, there are three ways
+       [t1 t2] can step.  Cases [ST_App1] and [ST_App2] follow
+       immediately by the induction hypotheses for the typing
        subderivations and a use of [T_App].
 
        Suppose instead [t1 t2] steps by [ST_AppAbs].  Then [t1 =
@@ -1590,5 +1580,5 @@ Qed.
 *)
 
 
-(* $Date: 2013-07-18 09:59:22 -0400 (Thu, 18 Jul 2013) $ *)
+(* $Date: 2013-12-05 11:55:09 -0500 (Thu, 05 Dec 2013) $ *)
 

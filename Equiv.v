@@ -200,13 +200,16 @@ Proof.
   Case "<-".
     apply E_IfTrue. reflexivity. assumption.  Qed.
 
+
 (** Of course, few programmers would be tempted to write a conditional
     whose guard is literally [BTrue].  A more interesting case is when
     the guard is _equivalent_ to true:
 
    _Theorem_: If [b] is equivalent to [BTrue], then [IFB b THEN c1
    ELSE c2 FI] is equivalent to [c1].
-
+*)
+(** ** *)
+(**
    _Proof_: 
 
      - ([->]) We must show, for all [st] and [st'], that if [IFB b
@@ -255,10 +258,12 @@ Proof.
     SCase "b evaluates to true".
       assumption.
     SCase "b evaluates to false (contradiction)".
+      unfold bequiv in Hb. simpl in Hb.
       rewrite Hb in H5.
       inversion H5.
   Case "<-".
     apply E_IfTrue; try assumption.
+    unfold bequiv in Hb. simpl in Hb.
     rewrite Hb. reflexivity.  Qed.
 
 (** **** Exercise: 2 stars (IFB_false) *)
@@ -282,6 +287,8 @@ Theorem swap_if_branches: forall b e1 e2,
 Proof.
   (* FILL IN HERE *) Admitted.
 (** [] *)
+
+(** ** *)
 
 (** For [WHILE] loops, we can give a similar pair of theorems.  A loop
     whose guard is equivalent to [BFalse] is equivalent to [SKIP],
@@ -315,6 +322,7 @@ Proof.
 []
 *)
 
+(** ** *)
 (** To prove the second fact, we need an auxiliary lemma stating that
     [WHILE] loops whose guards are equivalent to [BTrue] never
     terminate:
@@ -448,6 +456,7 @@ Proof.
     than for the second parameter, so it is no wonder that the
     equality doesn't hold. *)
 
+(** ** *)
 (** This problem is actually quite general. If we try to prove other
     simple facts, such as
     cequiv (X ::= X + 1;;
@@ -708,6 +717,8 @@ Proof.
   (* FILL IN HERE *) Admitted.
 (** [] *)
 
+(** ** *)
+
 (** For example, here are two equivalent programs and a proof of their
     equivalence... *)
 
@@ -740,18 +751,15 @@ Proof.
 Qed.
 
 (* ####################################################### *)
-(** * Case Study: Constant Folding *)
+(** * Program Transformations *)
 
 (** A _program transformation_ is a function that takes a program
     as input and produces some variant of the program as its
     output.  Compiler optimizations such as constant folding are
     a canonical example, but there are many others. *)
 
-(* ####################################################### *)
-(** ** Soundness of Program Transformations *)
-
 (** A program transformation is _sound_ if it preserves the
-    behavior of the original program.
+    behavior of the original program. 
  
     We can define a notion of soundness for translations of
     [aexp]s, [bexp]s, and [com]s. *)
@@ -816,6 +824,7 @@ Example fold_aexp_ex2 :
   = AMinus (AId X) (APlus (ANum 0) (AId Y)).
 Proof. reflexivity. Qed.
 
+(** ** *)
 (** Not only can we lift [fold_constants_aexp] to [bexp]s (in the
     [BEq] and [BLe] cases), we can also find constant _boolean_
     expressions and reduce them in-place. *)
@@ -863,6 +872,7 @@ Example fold_bexp_ex2 :
   = BAnd (BEq (AId X) (AId Y)) BTrue.
 Proof. reflexivity. Qed.
 
+(** ** *)
 (** To fold constants in a command, we apply the appropriate folding
     functions on all embedded expressions. *)
 
@@ -889,6 +899,7 @@ Fixpoint fold_constants_com (c : com) : com :=
       end
   end.
 
+(** ** *)
 Example fold_com_ex1 :
   fold_constants_com 
     (* Original program: *)
@@ -945,7 +956,7 @@ Proof.
          destruct (fold_constants_aexp a2);
          rewrite IHa1; rewrite IHa2; reflexivity). Qed.
                                                       
-(** **** Exercise: 3 stars, optional (fold_bexp_BEq_informal) *)
+(** **** Exercise: 3 stars, optional (fold_bexp_Eq_informal) *)
 (** Here is an informal proof of the [BEq] case of the soundness
     argument for boolean expression constant folding.  Read it
     carefully and compare it to the formal proof that follows.  Then
@@ -1170,6 +1181,7 @@ Definition subst_equiv_property := forall i1 i2 a1 a2,
   cequiv (i1 ::= a1;; i2 ::= a2)
          (i1 ::= a1;; i2 ::= subst_aexp i1 a1 a2).
 
+(** ** *)
 (** Sadly, the property does _not_ always hold. 
 
     _Theorem_: It is not the case that, for all [i1], [i2], [a1],
@@ -1199,6 +1211,7 @@ Definition subst_equiv_property := forall i1 i2 a1 a2,
         / empty_state || st2,
     where [st2 = { X |-> 1, Y |-> 2 }].  Note that [st1 <> st2]; this
     is a contradiction, since [ceval] is deterministic!  [] *)
+
 
 Theorem subst_inequiv : 
   ~ subst_equiv_property.
@@ -1458,10 +1471,10 @@ Proof. (* FILL IN HERE *) Admitted.
     phenomenon.
 *)
 
-(** **** Exercise: 5 stars, advanced (havoc_diverge) *)
-(** Prove the following program equivalences and non-equivalences, and
-    try to understand why the [cequiv] definition has the behavior it
-    has on these examples. *)
+(** **** Exercise: 5 stars, advanced (p1_p2_equiv) *)
+(** Prove that p1 and p2 are equivalent. In this and the following
+    exercises, try to understand why the [cequiv] definition has the
+    behavior it has on these examples. *)
 
 Definition p1 : com :=
   WHILE (BNot (BEq (AId X) (ANum 0))) DO
@@ -1475,8 +1488,29 @@ Definition p2 : com :=
   END.
 
 
+(** Intuitively, the programs have the same termination
+    behavior: either they loop forever, or they terminate in the
+    same state they started in.  We can capture the termination
+    behavior of p1 and p2 individually with these lemmas: *)
+
+Lemma p1_may_diverge : forall st st', st X <> 0 ->
+  ~ p1 / st || st'.
+Proof. (* FILL IN HERE *) Admitted.
+
+Lemma p2_may_diverge : forall st st', st X <> 0 ->
+  ~ p2 / st || st'.
+Proof.
+(* FILL IN HERE *) Admitted.
+
+(** You should use these lemmas to prove that p1 and p2 are actually
+    equivalent. *)
+
 Theorem p1_p2_equiv : cequiv p1 p2.
 Proof. (* FILL IN HERE *) Admitted.
+
+(** **** Exercise: 4 stars, advanced (p3_p4_inquiv) *)
+
+(** Prove that the following programs are _not_ equivalent. *)
 
 Definition p3 : com :=
   Z ::= ANum 1;;
@@ -1492,6 +1526,8 @@ Definition p4 : com :=
 
 Theorem p3_p4_inequiv : ~ cequiv p3 p4.
 Proof. (* FILL IN HERE *) Admitted.
+
+(** **** Exercise: 5 stars, advanced, optional (p5_p6_equiv) *)
 
 Definition p5 : com :=
   WHILE (BNot (BEq (AId X) (ANum 1))) DO

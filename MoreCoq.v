@@ -95,7 +95,7 @@ Proof.
   intros n H.
   symmetry.
   simpl. (* Actually, this [simpl] is unnecessary, since 
-            [apply] will do a [simpl] step first. *)  
+            [apply] will perform simplification first. *)
   apply H.  Qed.         
 
 (** **** Exercise: 3 stars (apply_exercise1) *)
@@ -293,29 +293,12 @@ Theorem f_equal : forall (A B : Type) (f: A -> B) (x y: A),
     x = y -> f x = f y. 
 Proof. intros A B f x y eq. rewrite eq.  reflexivity.  Qed. 
 
-(** Here's another illustration of [inversion].  This is a slightly
-    roundabout way of stating a fact that we have already proved
-    above.  The extra equalities force us to do a little more
-    equational reasoning and exercise some of the tactics we've seen
-    recently. *)
 
-Theorem length_snoc' : forall (X : Type) (v : X)
-                              (l : list X) (n : nat),
-     length l = n ->
-     length (snoc l v) = S n. 
-Proof.
-  intros X v l. induction l as [| v' l'].
-  Case "l = []". intros n eq. rewrite <- eq. reflexivity.
-  Case "l = v' :: l'". intros n eq. simpl. destruct n as [| n'].
-    SCase "n = 0". inversion eq.
-    SCase "n = S n'".
-      apply f_equal. apply IHl'. inversion eq. reflexivity. Qed.
 
 
 (** **** Exercise: 2 stars, optional (practice) *)
 (** A couple more nontrivial but not-too-complicated proofs to work
-    together in class, or for you to work as exercises.  They may
-    involve applying lemmas from earlier lectures or homeworks. *)
+    together in class, or for you to work as exercises. *)
  
 
 Theorem beq_nat_0_l : forall n,
@@ -531,7 +514,7 @@ Proof.
     a property of [n] and [m] by induction on [n], we may need to
     leave [m] generic. *)
 
-(** The proof of this theorem has to be treated similarly: *)
+(** The proof of this theorem (left as an exercise) has to be treated similarly: *)
 
 (** **** Exercise: 2 stars (beq_nat_true) *)
 Theorem beq_nat_true : forall n m,
@@ -645,6 +628,64 @@ _Proof_: Let [m] be a [nat]. We prove by induction on [m] that, for
     m'].  Since [S n' = n] and [S m' = m], this is just what we wanted
     to show. [] *)
 
+
+
+(** Here's another illustration of [inversion] and using an
+    appropriately general induction hypothesis.  This is a slightly
+    roundabout way of stating a fact that we have already proved
+    above.  The extra equalities force us to do a little more
+    equational reasoning and exercise some of the tactics we've seen
+    recently. *)
+
+Theorem length_snoc' : forall (X : Type) (v : X)
+                              (l : list X) (n : nat),
+     length l = n ->
+     length (snoc l v) = S n. 
+Proof.
+  intros X v l. induction l as [| v' l'].
+
+  Case "l = []". 
+    intros n eq. rewrite <- eq. reflexivity.
+
+  Case "l = v' :: l'". 
+    intros n eq. simpl. destruct n as [| n'].
+    SCase "n = 0". inversion eq.
+    SCase "n = S n'".
+      apply f_equal. apply IHl'. inversion eq. reflexivity. Qed.
+
+(** It might be tempting to start proving the above theorem
+    by introducing [n] and [eq] at the outset.  However, this leads
+    to an induction hypothesis that is not strong enough.  Compare
+    the above to the following (aborted) attempt: *)
+
+Theorem length_snoc_bad : forall (X : Type) (v : X)
+                              (l : list X) (n : nat),
+     length l = n ->
+     length (snoc l v) = S n. 
+Proof.
+  intros X v l n eq. induction l as [| v' l'].
+
+  Case "l = []". 
+    rewrite <- eq. reflexivity.
+
+  Case "l = v' :: l'". 
+    simpl. destruct n as [| n'].
+    SCase "n = 0". inversion eq.
+    SCase "n = S n'".
+      apply f_equal. Abort. (* apply IHl'. *) (* The IH doesn't apply! *)
+
+
+(** As in the double examples, the problem is that by
+    introducing [n] before doing induction on [l], the induction
+    hypothesis is specialized to one particular natural number, namely
+    [n].  In the induction case, however, we need to be able to use
+    the induction hypothesis on some other natural number [n'].
+    Retaining the more general form of the induction hypothesis thus
+    gives us more flexibility.
+
+    In general, a good rule of thumb is to make the induction hypothesis
+    as general as possible. *)
+
 (** **** Exercise: 3 stars (gen_dep_practice) *)
 
 (** Prove this by induction on [l]. *)
@@ -699,6 +740,21 @@ Theorem app_length_twice : forall (X:Type) (n:nat) (l:list X),
 Proof.
   (* FILL IN HERE *) Admitted.
 (** [] *)
+
+
+(** **** Exercise: 3 stars, optional (double_induction) *)
+(** Prove the following principle of induction over two naturals. *)
+
+Theorem double_induction: forall (P : nat -> nat -> Prop), 
+  P 0 0 ->
+  (forall m, P m 0 -> P (S m) 0) ->
+  (forall n, P 0 n -> P 0 (S n)) ->
+  (forall m n, P m n -> P (S m) (S n)) ->
+  forall m n, P m n.
+Proof.
+  (* FILL IN HERE *) Admitted.
+(** [] *)
+
 
 (* ###################################################### *)
 (** * Using [destruct] on Compound Expressions *)
@@ -1008,7 +1064,7 @@ Proof.
 (* FILL IN HERE *)
 (** [] *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-02-04 07:15:43 -0500 (Tue, 04 Feb 2014) $ *)
 
 
 

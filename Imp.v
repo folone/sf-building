@@ -80,6 +80,7 @@ Inductive bexp : Type :=
     taken a course where these techniques are covered (e.g., a
     compilers course) you may want to skim it. *)
 
+(** *** *)
 (** For comparison, here's a conventional BNF (Backus-Naur Form)
     grammar defining the same abstract syntax:
     a ::= nat
@@ -91,8 +92,8 @@ Inductive bexp : Type :=
         | false
         | a = a
         | a <= a
-        | b and b
         | not b
+        | b and b
 *)
 
 (** Compared to the Coq version above...
@@ -143,6 +144,7 @@ Example test_aeval1:
   aeval (APlus (ANum 2) (ANum 2)) = 4.
 Proof. reflexivity. Qed.
 
+(** *** *)
 (** Similarly, evaluating a boolean expression yields a boolean. *)
 
 Fixpoint beval (b : bexp) : bool :=
@@ -735,6 +737,8 @@ Tactic Notation "aevalR_cases" tactic(first) ident(c) :=
                          AMult e1 e2 || n1*n2
 *)
 
+
+
 (* ####################################################### *)
 (** ** Equivalence of the Definitions *)
 
@@ -861,6 +865,12 @@ where "a '||' n" := (aevalR a n) : type_scope.
 End aevalR_division.
 Module aevalR_extended.
 
+
+(** *** Adding nondeterminism *)
+(* /TERSE *)
+(** Suppose, instead, that we want to extend the arithmetic operations
+    by a nondeterministic number generator [any]:*)
+
 Inductive aexp : Type :=
   | AAny  : aexp                   (* <--- NEW *)
   | ANum : nat -> aexp
@@ -927,6 +937,7 @@ Proof.
      right. intros contra. inversion contra. apply Hneq. apply H0.
 Defined. 
 
+
 (** The following lemmas will be useful for rewriting terms involving [eq_id_dec]. *)
 
 Lemma eq_id : forall (T:Type) x (p q:T), 
@@ -952,11 +963,17 @@ End Id.
 (* ####################################################### *)
 (** ** States *)
 
-(** A _state_ represents the current values of all the variables at
+(** A _state_ represents the current values of _all_ the variables at
     some point in the execution of a program. *)
 (** For simplicity (to avoid dealing with partial functions), we
     let the state be defined for _all_ variables, even though any
-    given program is only going to mention a finite number of them. *)
+    given program is only going to mention a finite number of them. 
+    The state captures all of the information stored in memory.  For Imp
+    programs, because each variable stores only a natural number, we
+    can represent the state as a mapping from identifiers to [nat].  
+    For more complex programming languages, the state might have more 
+    structure.  
+*)
 
 Definition state := id -> nat.
 
@@ -1113,14 +1130,17 @@ Proof. reflexivity. Qed.
     grammar:
      c ::= SKIP
          | x ::= a
-         | c ; c
+         | c ;; c
          | WHILE b DO c END
          | IFB b THEN c ELSE c FI
+]] 
+*)
+(**
     For example, here's the factorial function in Imp.
-     Z ::= X;
-     Y ::= 1;
+     Z ::= X;;
+     Y ::= 1;;
      WHILE not (Z = 0) DO
-       Y ::= Y * Z;
+       Y ::= Y * Z;;
        Z ::= Z - 1
      END
    When this command terminates, the variable [Y] will contain the
@@ -1186,7 +1206,8 @@ Definition subtract_slowly_body : com :=
   Z ::= AMinus (AId Z) (ANum 1) ;;
   X ::= AMinus (AId X) (ANum 1).
 
-(** Loops: *)
+
+(** *** Loops *)
 
 Definition subtract_slowly : com :=
   WHILE BNot (BEq (AId X) (ANum 0)) DO
@@ -1198,7 +1219,8 @@ Definition subtract_3_from_5_slowly : com :=
   Z ::= ANum 5 ;;
   subtract_slowly.
 
-(** An infinite loop: *)
+
+(** *** An infinite loop: *)
 
 Definition loop : com :=
   WHILE BTrue DO
@@ -1234,7 +1256,6 @@ Fixpoint ceval_fun_no_while (st : state) (c : com) : state :=
     | WHILE b DO c END =>
         st  (* bogus *)
   end.
-
 (** In a traditional functional programming language like ML or
     Haskell we could write the [WHILE] case as follows:
 <<
@@ -1282,11 +1303,13 @@ Fixpoint ceval_fun_no_while (st : state) (c : com) : state :=
     we'd want the definition of evaluation to be non-deterministic --
     i.e., not only would it not be total, it would not even be a
     partial function! *)
-
 (** We'll use the notation [c / st || st'] for our [ceval] relation:
     [c / st || st'] means that executing program [c] in a starting
     state [st] results in an ending state [st'].  This can be
     pronounced "[c] takes state [st] to [st']".
+
+*)
+(** *** Operational Semantics 
                            ----------------                            (E_Skip)
                            SKIP / st || st
 
@@ -1360,6 +1383,7 @@ Tactic Notation "ceval_cases" tactic(first) ident(c) :=
   | Case_aux c "E_IfTrue" | Case_aux c "E_IfFalse"
   | Case_aux c "E_WhileEnd" | Case_aux c "E_WhileLoop" ].
 
+(** *** *)
 (** The cost of defining evaluation as a relation instead of a
     function is that we now need to construct _proofs_ that some
     program evaluates to some result state, rather than just letting
@@ -1810,6 +1834,7 @@ Theorem while_stops_on_break : forall b c st st',
 Proof.
   (* FILL IN HERE *) Admitted.
 
+(** **** Exercise: 3 stars, advanced, optional (while_break_true) *)
 Theorem while_break_true : forall b c st st',
   (WHILE b DO c END) / st || SContinue / st' ->
   beval st' b = true ->
@@ -1817,6 +1842,7 @@ Theorem while_break_true : forall b c st st',
 Proof.
 (* FILL IN HERE *) Admitted.
 
+(** **** Exercise: 4 stars, advanced, optional (ceval_deterministic) *)
 Theorem ceval_deterministic: forall (c:com) st st1 st2 s1 s2,
      c / st || s1 / st1  ->
      c / st || s2 / st2 ->
@@ -1860,5 +1886,5 @@ End BreakImp.
 (** [] *)
 
 
-(* <$Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* <$Date: 2014-02-22 09:43:41 -0500 (Sat, 22 Feb 2014) $ *)
 

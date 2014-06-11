@@ -1,6 +1,6 @@
 (** * ProofObjects: Working with Explicit Evidence in Coq *)
 
-Require Export Logic.
+Require Export MoreLogic.
 
 (* ##################################################### *)
 
@@ -43,12 +43,16 @@ Print beautiful.
     | b_sum : forall n m : nat, beautiful n -> beautiful m -> beautiful (n + m)
 *)
 
+(** *** *)
+
 (** The trick is to introduce an alternative pronunciation of "[:]".
     Instead of "has type," we can also say "is a proof of."  For
     example, the second line in the definition of [beautiful] declares
     that [b_0 : beautiful 0].  Instead of "[b_0] has type 
     [beautiful 0]," we can say that "[b_0] is a proof of [beautiful 0]."
     Similarly for [b_3] and [b_5]. *)
+
+(** *** *)
 
 (** This pun between types and propositions (between [:] as "has type"
     and [:] as "is a proof of" or "is evidence for") is called the
@@ -67,9 +71,9 @@ Check b_sum.
                   beautiful m -> 
                   beautiful (n+m) *)
 (** This can be read "[b_sum] is a constructor that takes four
-    arguments -- two numbers, [n] and [m], and two values, of types
-    [beautiful n] and [beautiful m] -- and yields evidence for the
-    proposition [beautiful (n+m)]." *)
+    arguments -- two numbers, [n] and [m], and two pieces of evidence,
+    for the propositions [beautiful n] and [beautiful m], respectively -- 
+    and yields evidence for the proposition [beautiful (n+m)]." *)
 
 (** Now let's look again at a previous proof involving [beautiful]. *)
 
@@ -100,7 +104,6 @@ Check (b_sum 3 5 b_3 b_5).
     as a primitive "evidence constructor" that, when applied to two
     particular numbers, wants to be further applied to evidence that
     those two numbers are beautiful; its type, 
-[[  
     forall n m, beautiful n -> beautiful m -> beautiful (n+m),
     expresses this functionality, in the same way that the polymorphic
     type [forall X, list X] in the previous chapter expressed the fact
@@ -201,7 +204,6 @@ Definition nine_is_beautiful' : beautiful 9 :=
   (* FILL IN HERE *) admit.
 (** [] *)
 
-
 (* ##################################################### *)
 (** ** Quantification, Implications and Functions *)
 
@@ -285,20 +287,13 @@ Definition beatiful_plus3'' : Prop :=
     "[forall (_:P), Q]". *)
 
 
-(** **** Exercise: 3 stars (b_times2) *)
-(** First prove this theorem using tactics. *)
+(** **** Exercise: 2 stars b_times2 *)
 
-Theorem b_times2: forall n, beautiful n -> beautiful (2*n).
-Proof.
-    (* FILL IN HERE *) Admitted.
-(** [] *)
-
-(** Now write a corresponding proof object directly. *)
+(** Give a proof object corresponding to the theorem [b_times2] from Prop.v *)
 
 Definition b_times2': forall n, beautiful n -> beautiful (2*n) :=
   (* FILL IN HERE *) admit.
 (** [] *)
-
 
 
 
@@ -387,7 +382,7 @@ Definition conj_fact : forall P Q R, P /\ Q -> Q /\ R -> P /\ R :=
 (** [] *)
 
 
-(** **** Exercise: 2 stars, advanced (beautiful_iff_gorgeous) *)
+(** **** Exercise: 2 stars, advanced, optional (beautiful_iff_gorgeous) *)
 
 (** We have seen that the families of propositions [beautiful] and
     [gorgeous] actually characterize the same set of numbers.
@@ -414,9 +409,10 @@ a witness value and a proof that the witness obeys that property.
 We can choose to construct the proof explicitly. 
 
 For example, consider this existentially quantified proposition: *)
+Check ex.
 
 Definition some_nat_is_even : Prop := 
-  ex nat ev.
+  ex _ ev.
 
 (** To prove this proposition, we need to choose a particular number
     as witness -- say, 4 -- and give some evidence that that number is
@@ -426,12 +422,13 @@ Definition snie : some_nat_is_even :=
   ex_intro _ ev 4 (ev_SS 2 (ev_SS 0 ev_0)).
 
 
-(** **** Exercise: 2 stars (ex_beautiful_Sn) *)
+(** **** Exercise: 2 stars, optional (ex_beautiful_Sn) *)
 (** Complete the definition of the following proof object: *)
 
-Definition p : ex nat (fun n => beautiful (S n)) :=
+Definition p : ex _ (fun n => beautiful (S n)) :=
 (* FILL IN HERE *) admit.
 (** [] *)
+
 
 
 (* ##################################################### *)
@@ -504,7 +501,7 @@ Proof.
 
 
 (* ##################################################### *)
-(** ** Programming with Tactics *)
+(** ** Programming with Tactics (Optional) *)
 
 (** If we can build proofs with explicit terms rather than
 tactics, you may be wondering if we can build programs using
@@ -536,5 +533,5 @@ This feature is mainly useful for writing functions with dependent types,
 which we won't explore much further in this book.
 But it does illustrate the uniformity and orthogonality of the basic ideas in Coq. *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-06-05 07:22:21 -0400 (Thu, 05 Jun 2014) $ *)
 

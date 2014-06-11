@@ -2,6 +2,8 @@
 
 Require Export Imp.
 
+
+
 (** The evaluators we have seen so far (e.g., the ones for
     [aexp]s, [bexp]s, and commands) have been formulated in a
     "big-step" style -- they specify how a given expression can be
@@ -66,21 +68,6 @@ Require Export Imp.
     with a "small-step" relation that specifies, for a given program,
     how the "atomic steps" of computation are performed. *)
 
-(* ########################################################### *)
-(** * Relations *)
-
-(** A _relation_ on a set [X] is a family of propositions
-    parameterized by two elements of [X] -- i.e., a proposition about
-    pairs of elements of [X].  *)
-
-Definition relation (X: Type) := X->X->Prop.
-
-(** Our main examples of such relations in this chapter will be
-    the single-step and multi-step reduction relations on terms, [==>]
-    and [==>*], but there are many other examples -- some that come to
-    mind are the "equals," "less than," "less than or equal to," and
-    "is the square of" relations on numbers, and the "prefix of"
-    relation on lists and strings. *)
 
 (* ########################################################### *)
 (** * A Toy Language *)
@@ -153,6 +140,8 @@ Module SimpleArith1.
                       P (C n1) t2 ==> P (C n1) t2'
 *)
 
+
+
 Reserved Notation " t '==>' t' " (at level 40).
 
 Inductive step : tm -> tm -> Prop :=
@@ -183,6 +172,7 @@ Tactic Notation "step_cases" tactic(first) ident(c) :=
       itself; the other two rules tell how to find it.
 
     - A term that is just a constant cannot take a step. *)
+
 
 (** Let's pause and check a couple of examples of reasoning with
     the [step] relation... *)
@@ -222,6 +212,29 @@ Example test_step_2 :
 Proof. 
   (* FILL IN HERE *) Admitted.
 (** [] *)
+
+
+
+
+(* ########################################################### *)
+(** * Relations *)
+
+(** We will be using several different step relations, so it is
+    helpful to generalize a bit... *)
+
+(** A (binary) _relation_ on a set [X] is a family of propositions
+    parameterized by two elements of [X] -- i.e., a proposition about
+    pairs of elements of [X].  *)
+
+Definition relation (X: Type) := X->X->Prop.
+
+
+(** Our main examples of such relations in this chapter will be
+    the single-step and multi-step reduction relations on terms, [==>]
+    and [==>*], but there are many other examples -- some that come to
+    mind are the "equals," "less than," "less than or equal to," and
+    "is the square of" relations on numbers, and the "prefix of"
+    relation on lists and strings. *)
 
 
 (** One simple property of the [==>] relation is that, like the
@@ -298,7 +311,8 @@ End SimpleArith1.
 
       - The _halting states_ of the machine are ones where there is no
         more computation to be done.
-
+*)
+(**
     We can then execute a term [t] as follows:
 
       - Take [t] as the starting state of the machine.
@@ -320,6 +334,7 @@ Inductive value : tm -> Prop :=
 (** Having introduced the idea of values, we can use it in the
     definition of the [==>] relation to write [ST_Plus2] rule in a
     slightly more elegant way: *)
+
 (** 
                      -------------------------------        (ST_PlusConstConst)
                      P (C n1) (C n2) ==> C (n1 + n2)
@@ -340,6 +355,8 @@ Inductive value : tm -> Prop :=
     to maintain a close correspondence between the informal and Coq
     versions of the rules, but later on we'll drop it in informal
     rules, for the sake of brevity.) *)
+
+(**  Here are the formal rules: *)
 
 Reserved Notation " t '==>' t' " (at level 40).
 
@@ -531,7 +548,6 @@ Inductive step : tm -> tm -> Prop :=
   where " t '==>' t' " := (step t t').
 
 
-(** *)
 
 (** **** Exercise: 3 stars, advanced (value_not_same_as_normal_form) *)
 Lemma value_not_same_as_normal_form :
@@ -539,7 +555,6 @@ Lemma value_not_same_as_normal_form :
 Proof.
   (* FILL IN HERE *) Admitted.
 (** [] *)
-
 End Temp1.
 
 (* ##################################################### *)
@@ -569,8 +584,6 @@ Inductive step : tm -> tm -> Prop :=
   where " t '==>' t' " := (step t t').
 
 
-(** *)
-
 (** **** Exercise: 2 stars, advanced (value_not_same_as_normal_form) *)
 Lemma value_not_same_as_normal_form :
   exists v, value v /\ ~ normal_form step v.
@@ -578,7 +591,6 @@ Proof.
   (* FILL IN HERE *) Admitted.
 
 (** [] *)
-
 End Temp2.
 
 (* ########################################################### *)
@@ -606,8 +618,6 @@ Inductive step : tm -> tm -> Prop :=
   where " t '==>' t' " := (step t t').
 
 (** (Note that [ST_Plus2] is missing.) *)
-
-(** *)
 
 (** **** Exercise: 3 stars, advanced (value_not_same_as_normal_form') *)
 Lemma value_not_same_as_normal_form :
@@ -1123,7 +1133,6 @@ Proof.
 (* FILL IN HERE *)
 []
 *)
-
 (** For the other direction, we need one lemma, which establishes a
     relation between single-step reduction and big-step evaluation. *)
 
@@ -1140,7 +1149,7 @@ Proof.
 (** The fact that small-step reduction implies big-step is now
     straightforward to prove, once it is stated correctly. 
 
-    The proof proceeds by induction on the multip-step reduction
+    The proof proceeds by induction on the multi-step reduction
     sequence that is buried in the hypothesis [normal_form_of t t']. *)
 (** Make sure you understand the statement before you start to
     work on the proof.  *)
@@ -1647,6 +1656,6 @@ Proof.
 (* FILL IN HERE *) Admitted.
 (** [] *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-04-02 10:55:30 -0400 (Wed, 02 Apr 2014) $ *)
 
 

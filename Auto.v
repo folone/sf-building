@@ -236,7 +236,7 @@ Qed.
 
 (** Now let's take a pass over [ceval_deterministic] using [auto]
     to simplify the proof script. We see that all simple sequences of hypothesis
-    applications and all uses of [reflexivity] can be replaces by [auto],
+    applications and all uses of [reflexivity] can be replaced by [auto],
     which we add to the default tactic to be applied to each case. 
 *)
 
@@ -403,9 +403,9 @@ Ltac find_eqn :=
          rewrite (H1 X H2) in * 
   end.
 
-(** But there are several pairs of hypotheses that have the correct
-    general form, and it seems tricky to pick out the correct ones.
-    The important thing to realize is that we can _try them all_!
+(** But there are several pairs of hypotheses that have the right
+    general form, and it seems tricky to pick out the ones we actually need.
+    A key trick is to realize that we can _try them all_!
     Here's how this works: 
 
     - [rewrite] will fail given a trivial equation of the form [X = X].
@@ -557,4 +557,4 @@ End Repeat.
 
 *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2013-07-30 12:24:33 -0400 (Tue, 30 Jul 2013) $ *)

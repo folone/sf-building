@@ -1,5 +1,0 @@
-- LibTactics.v#407: Require Coq.PArith.BinPos -> Require BinPos
-  http://www.lix.polytechnique.fr/coq/bugs/show_bug.cgi?id=2759
-- PE.v#1032-1094: Commented out:
-  Error: The variable PE_WhileFixed was not found in the current environment.
-  make: *** [PE.vo] Error 1

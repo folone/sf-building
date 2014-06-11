@@ -36,7 +36,7 @@ Require Export Basics.
     Disciplined use of indentation and comments can help, but a better
     way is to use the [Case] tactic. *)
 
-(* [Case] is not built into Coq: we need to define it ourselves.
+(** [Case] is not built into Coq: we need to define it ourselves.
     There is no need to understand how it works -- you can just skip
     over the definition to the example that follows.  It uses some
     facilities of Coq that we have not discussed -- the string
@@ -147,6 +147,8 @@ Proof.
   simpl. (* Does nothing! *)
 Abort.
 
+(** *** *)
+
 (** And reasoning by cases using [destruct n] doesn't get us much
    further: the branch of the case analysis where we assume [n = 0]
    goes through, but in the branch where [n = S n'] for some [n'] we
@@ -163,6 +165,8 @@ Proof.
   Case "n = S n'".
     simpl.       (* ...but here we are stuck again *)
 Abort.
+
+(** *** *)
 
 (** To prove such facts -- indeed, to prove most interesting
     facts about numbers, lists, and other inductively defined sets --
@@ -183,6 +187,8 @@ Abort.
     subgoals: first showing [P(O)] and then showing [P(n') -> P(S
     n')].  Here's how this works for the theorem we are trying to
     prove at the moment: *)
+
+(** *** *)
 
 Theorem plus_0_r : forall n:nat, n + 0 = n.
 Proof.
@@ -520,7 +526,7 @@ Proof.
 (** "Informal proofs are algorithms; formal proofs are code." *)
 
 (** The question of what, exactly, constitutes a "proof" of a
-    mathematical claim has challenged philosophers for millenia.  A
+    mathematical claim has challenged philosophers for millennia.  A
     rough and ready definition, though, could be this: a proof of a
     mathematical proposition [P] is a written (or spoken) text that
     instills in the reader or hearer the certainty that [P] is true.
@@ -634,4 +640,4 @@ Proof.
 []
  *)
 
-(* $Date: 2013-07-17 16:19:11 -0400 (Wed, 17 Jul 2013) $ *)
+(* $Date: 2014-02-19 21:36:35 -0500 (Wed, 19 Feb 2014) $ *)
